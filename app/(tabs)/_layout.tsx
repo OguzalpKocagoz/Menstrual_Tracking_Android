@@ -22,11 +22,11 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: palette.bg },
+        headerStyle: { backgroundColor: palette.chrome },
         headerTintColor: palette.text,
         headerShadowVisible: false,
-        sceneStyle: { backgroundColor: palette.bg },
-        tabBarStyle: { backgroundColor: palette.surface, borderTopColor: palette.border },
+        sceneStyle: { backgroundColor: "transparent" },
+        tabBarStyle: { backgroundColor: palette.chrome, borderTopColor: palette.border },
         tabBarActiveTintColor: palette.brand,
         tabBarInactiveTintColor: palette.textMuted,
         headerRight: () => (

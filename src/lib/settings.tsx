@@ -15,6 +15,12 @@ export interface Settings {
   defaultPeriodLength: number | null;
   /** Kullanıcı tıbbi uyarıyı onayladı mı. */
   disclaimerAccepted: boolean;
+  /** Açılışta ve arka plandan dönüşte telefon kilidiyle doğrulama. */
+  appLockEnabled: boolean;
+  /** Adetten kaç gün önce hatırlatılsın; null → kapalı. */
+  reminderPeriodDays: number | null;
+  /** Doğurgan dönemin ilk günü hatırlatılsın mı. */
+  reminderFertile: boolean;
 }
 
 const KEYS = {
@@ -22,6 +28,9 @@ const KEYS = {
   defaultCycleLength: "defaultCycleLength",
   defaultPeriodLength: "defaultPeriodLength",
   disclaimerAcceptedAt: "disclaimerAcceptedAt",
+  appLockEnabled: "appLockEnabled",
+  reminderPeriodDays: "reminderPeriodDays",
+  reminderFertile: "reminderFertile",
 } as const;
 
 function readNumber(value: string | undefined): number | null {
@@ -38,6 +47,9 @@ function loadSettings(): Settings {
     defaultCycleLength: readNumber(raw[KEYS.defaultCycleLength]),
     defaultPeriodLength: readNumber(raw[KEYS.defaultPeriodLength]),
     disclaimerAccepted: Boolean(raw[KEYS.disclaimerAcceptedAt]),
+    appLockEnabled: raw[KEYS.appLockEnabled] === "1",
+    reminderPeriodDays: readNumber(raw[KEYS.reminderPeriodDays]),
+    reminderFertile: raw[KEYS.reminderFertile] === "1",
   };
 }
 
@@ -46,6 +58,8 @@ interface SettingsValue {
   setTheme: (theme: AppTheme) => void;
   setDefaultLengths: (cycle: number | null, period: number | null) => void;
   acceptDisclaimer: () => void;
+  setAppLock: (enabled: boolean) => void;
+  setReminders: (periodDays: number | null, fertile: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsValue | null>(null);
@@ -71,9 +85,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((current) => ({ ...current, disclaimerAccepted: true }));
   }, []);
 
+  const setAppLock = useCallback((enabled: boolean) => {
+    writeSettingSync(KEYS.appLockEnabled, enabled ? "1" : null);
+    setSettings((current) => ({ ...current, appLockEnabled: enabled }));
+  }, []);
+
+  const setReminders = useCallback((periodDays: number | null, fertile: boolean) => {
+    writeSettingSync(KEYS.reminderPeriodDays, periodDays === null ? null : String(periodDays));
+    writeSettingSync(KEYS.reminderFertile, fertile ? "1" : null);
+    setSettings((current) => ({ ...current, reminderPeriodDays: periodDays, reminderFertile: fertile }));
+  }, []);
+
   const value = useMemo(
-    () => ({ settings, setTheme, setDefaultLengths, acceptDisclaimer }),
-    [settings, setTheme, setDefaultLengths, acceptDisclaimer],
+    () => ({ settings, setTheme, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders }),
+    [settings, setTheme, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

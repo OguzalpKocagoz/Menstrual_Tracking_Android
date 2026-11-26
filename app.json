@@ -6,7 +6,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#19070e",
     "ios": {
       "supportsTablet": true
     },
@@ -31,7 +32,12 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-local-authentication",
+        { "faceIDPermission": "Kayıtlarını korumak için uygulama kilidinde Face ID kullanılır." }
+      ],
+      ["expo-notifications", { "color": "#d03765" }]
     ]
   }
 }

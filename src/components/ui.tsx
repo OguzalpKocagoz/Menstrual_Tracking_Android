@@ -28,7 +28,7 @@ export function Screen({
 }) {
   const { palette } = useTheme();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: palette.bg }} edges={edges}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }} edges={edges}>
       <ScrollView
         contentContainerStyle={styles.screen}
         keyboardShouldPersistTaps="handled"

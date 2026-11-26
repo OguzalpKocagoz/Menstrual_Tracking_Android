@@ -1,15 +1,24 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { useColorScheme } from "react-native";
 import { DEFAULT_THEME, type AppTheme, type CyclePhase } from "@/core";
+import { oklch } from "./color";
 
 /**
  * Tema renkleri.
  *
- * Değerler web'deki `globals.css`'ten (oklch) sRGB hex'e çevrilerek alındı;
- * React Native oklch'yi tanımıyor. Koyu modda parlaklık yükseltilir,
- * doygunluk düşürülür — web ile aynı kural. Tema hesap başına saklanır.
+ * Uygulama her zaman web'deki özel panelin gece görünümünde: koyu zemin,
+ * yıldızlı gökyüzü ve üstünde yarı saydam kartlar. Temalar yalnızca vurgu
+ * rengini değil bütün görünümü renklendirir — zeminin, kartların, kenarlıkların,
+ * gökyüzü parıltısının ve kayan şekillerin tonu temadan gelir. Böylece tema
+ * değiştirmek bir düğme renginin değişmesi değil, başka bir gökyüzüne geçmek
+ * gibi hissettiriyor.
+ *
+ * Açıklık/doygunluk oranları web'deki `[data-night="true"]` bloğundan alındı;
+ * yalnızca ton (hue) temaya göre değişir, böylece her temada okunurluk aynı.
+ * Zemin ve kartlarda doygunluk web'dekinden biraz yüksek: tema farkı ancak
+ * böyle bütün ekranda hissediliyor.
  */
 export interface Palette {
+  /** Düz zemin. Gökyüzünün en alt katmanı ve gökyüzünün görünmediği örtüler. */
   bg: string;
   surface: string;
   surfaceMuted: string;
@@ -27,103 +36,98 @@ export interface Palette {
   ovulationSoft: string;
   predicted: string;
   onBrand: string;
+  /** Üst bar ve alt gezinme: gökyüzü arkadan hafifçe seçilsin diye yarı saydam. */
+  chrome: string;
 }
 
-type Accent = Omit<Palette, "bg" | "surface" | "surfaceMuted" | "border" | "text" | "textMuted" | "onBrand">;
+/** Gökyüzünde kayan şekiller. */
+export type SkyShape = "sparkle" | "star" | "moon" | "flower" | "petal" | "leaf" | "bubble" | "droplet";
 
-const BASE_LIGHT = {
-  bg: "#fefafd",
-  surface: "#ffffff",
-  surfaceMuted: "#f9f3f7",
-  border: "#e6dfe3",
-  text: "#251c24",
-  textMuted: "#736871",
-  onBrand: "#ffffff",
+export interface Sky {
+  /** Arka plandaki iki renkli parıltı (web'deki bulanık radyal gradyanlar). */
+  glowA: string;
+  glowB: string;
+  /** Kayan şekillerin rengi. */
+  shapeColor: string;
+  /** Yakın yıldızların hale rengi. */
+  starHalo: string;
+  /** Bu temanın gökyüzünde kayan şekiller; her şekil eşit olasılıkla seçilir. */
+  shapes: readonly SkyShape[];
+}
+
+interface ThemeSpec {
+  /** Temanın ana tonu: zemin, kartlar, vurgu ve şekiller. */
+  hue: number;
+  /** İkinci parıltının tonu; ana tondan farklı olunca gökyüzü derinleşiyor. */
+  glowHue: number;
+  period: number;
+  fertile: number;
+  ovulation: number;
+  shapes: readonly SkyShape[];
+}
+
+const SPECS: Record<AppTheme, ThemeSpec> = {
+  // Gül: kayan gül yaprakları ve küçük çiçekler.
+  rose: { hue: 355, glowHue: 20, period: 15, fertile: 195, ovulation: 70, shapes: ["petal", "petal", "flower", "sparkle"] },
+  // Lavanta: çiçekler ve yıldızlar.
+  bloom: { hue: 300, glowHue: 330, period: 335, fertile: 215, ovulation: 60, shapes: ["flower", "flower", "star", "sparkle"] },
+  // Okyanus: baloncuklar ve damlalar.
+  ocean: { hue: 235, glowHue: 200, period: 20, fertile: 185, ovulation: 85, shapes: ["bubble", "bubble", "droplet", "sparkle"] },
+  // Orman: süzülen yapraklar ve ateş böcekleri (parıltılar).
+  forest: { hue: 155, glowHue: 115, period: 25, fertile: 190, ovulation: 85, shapes: ["leaf", "leaf", "sparkle", "sparkle"] },
+  // Aurora: web'deki özel panelin kendisi — yıldızlar ve hilaller.
+  aurora: { hue: 315, glowHue: 175, period: 350, fertile: 200, ovulation: 65, shapes: ["star", "moon", "sparkle", "sparkle"] },
 };
 
-const BASE_DARK = {
-  bg: "#120e12",
-  surface: "#1f181e",
-  surfaceMuted: "#282127",
-  border: "#383037",
-  text: "#f2edf1",
-  textMuted: "#aaa1a9",
-  onBrand: "#120e12",
-};
+function buildPalette(spec: ThemeSpec): Palette {
+  const { hue } = spec;
+  return {
+    bg: oklch(0.16, 0.035, hue),
+    surface: oklch(0.25, 0.05, hue, 0.8),
+    surfaceMuted: oklch(0.31, 0.055, hue, 0.85),
+    border: oklch(0.43, 0.07, hue, 0.7),
+    text: oklch(0.96, 0.015, hue),
+    textMuted: oklch(0.78, 0.035, hue),
+    brand: oklch(0.78, 0.17, hue),
+    brandStrong: oklch(0.86, 0.15, hue),
+    brandSoft: oklch(0.34, 0.11, hue, 0.8),
+    period: oklch(0.72, 0.18, spec.period),
+    periodSoft: oklch(0.35, 0.1, spec.period, 0.8),
+    fertile: oklch(0.78, 0.13, spec.fertile),
+    fertileSoft: oklch(0.34, 0.08, spec.fertile, 0.8),
+    ovulation: oklch(0.82, 0.14, spec.ovulation),
+    ovulationSoft: oklch(0.37, 0.09, spec.ovulation, 0.8),
+    predicted: oklch(0.62, 0.1, hue),
+    onBrand: oklch(0.18, 0.04, hue),
+    chrome: oklch(0.18, 0.04, hue, 0.72),
+  };
+}
 
-const ACCENTS: Record<AppTheme, { light: Accent; dark: Accent }> = {
-  rose: {
-    light: {
-      brand: "#d03765", brandStrong: "#b7014d", brandSoft: "#ffe7eb",
-      period: "#d23855", periodSoft: "#ffdbdd", fertile: "#00a099", fertileSoft: "#cef4f1",
-      ovulation: "#da950b", ovulationSoft: "#ffeac2", predicted: "#ca8a95",
-    },
-    dark: {
-      brand: "#ef6e8b", brandStrong: "#ff8ba5", brandSoft: "#472028",
-      period: "#e35b6d", periodSoft: "#512227", fertile: "#30b4ad", fertileSoft: "#033633",
-      ovulation: "#e8aa4e", ovulationSoft: "#47300c", predicted: "#9e5a67",
-    },
-  },
-  bloom: {
-    light: {
-      brand: "#854ece", brandStrong: "#7233bb", brandSoft: "#f2e9ff",
-      period: "#ad36a7", periodSoft: "#ffe0fb", fertile: "#0097bc", fertileSoft: "#cff2fe",
-      ovulation: "#eb883b", ovulationSoft: "#ffe5c9", predicted: "#a18cc8",
-    },
-    dark: {
-      brand: "#b58bf9", brandStrong: "#cda6ff", brandSoft: "#33244b",
-      period: "#d16cc9", periodSoft: "#462444", fertile: "#25afd2", fertileSoft: "#07333f",
-      ovulation: "#f7a062", ovulationSoft: "#4d2c15", predicted: "#7b63a3",
-    },
-  },
-  ocean: {
-    light: {
-      brand: "#0081b6", brandStrong: "#0069a1", brandSoft: "#d1f1ff",
-      period: "#c74a51", periodSoft: "#ffdfdd", fertile: "#009d9e", fertileSoft: "#cdf4f3",
-      ovulation: "#c09910", ovulationSoft: "#feeec1", predicted: "#61a2c0",
-    },
-    dark: {
-      brand: "#32b3e6", brandStrong: "#60ccfc", brandSoft: "#003346",
-      period: "#e66d71", periodSoft: "#512224", fertile: "#16bbbc", fertileSoft: "#023536",
-      ovulation: "#deba50", ovulationSoft: "#41340a", predicted: "#317e9f",
-    },
-  },
-  forest: {
-    light: {
-      brand: "#007e46", brandStrong: "#006a2f", brandSoft: "#d7f4e0",
-      period: "#c13c3b", periodSoft: "#ffdfda", fertile: "#009d90", fertileSoft: "#cff4ef",
-      ovulation: "#d29922", ovulationSoft: "#ffebc2", predicted: "#69a17d",
-    },
-    dark: {
-      brand: "#51b67a", brandStrong: "#73ce95", brandSoft: "#0c341e",
-      period: "#ea6a64", periodSoft: "#512320", fertile: "#3dbbae", fertileSoft: "#053631",
-      ovulation: "#e9b452", ovulationSoft: "#45310b", predicted: "#42815a",
-    },
-  },
-  aurora: {
-    light: {
-      brand: "#9c40bf", brandStrong: "#851ca9", brandSoft: "#f8e2ff",
-      period: "#c23492", periodSoft: "#ffdef3", fertile: "#00a1b4", fertileSoft: "#c5f6fb",
-      ovulation: "#e78c08", ovulationSoft: "#ffe6be", predicted: "#b085c3",
-    },
-    dark: {
-      brand: "#d689f7", brandStrong: "#eba2ff", brandSoft: "#3f224c",
-      period: "#e969b8", periodSoft: "#51223f", fertile: "#00c2d2", fertileSoft: "#00393f",
-      ovulation: "#fba952", ovulationSoft: "#502f08", predicted: "#8e65a0",
-    },
-  },
-};
+function buildSky(spec: ThemeSpec): Sky {
+  return {
+    glowA: oklch(0.47, 0.2, spec.hue),
+    glowB: oklch(0.44, 0.18, spec.glowHue),
+    shapeColor: oklch(0.86, 0.13, spec.hue),
+    starHalo: oklch(0.86, 0.1, spec.hue, 0.85),
+    shapes: spec.shapes,
+  };
+}
 
-/** Aurora'nın kendi zemin tonları var; diğer temalar ortak zemini kullanır. */
-const AURORA_BASE = {
-  light: { bg: "#f6f3fc", surface: "#ffffff", surfaceMuted: "#f0ecf9", border: "#ddd8e8", text: "#211c2b", textMuted: "#6b6578" },
-  dark: { bg: "#110d19", surface: "#1d1727", surfaceMuted: "#292334", border: "#383145", text: "#efedf6", textMuted: "#a6a2b1" },
-};
+// Paletler açılışta bir kez hesaplanır; tema değişiminde yeniden hesap yok.
+const PALETTES = Object.fromEntries(
+  Object.entries(SPECS).map(([theme, spec]) => [theme, buildPalette(spec)]),
+) as Record<AppTheme, Palette>;
 
-export function getPalette(theme: AppTheme, scheme: "light" | "dark"): Palette {
-  const base = scheme === "dark" ? BASE_DARK : BASE_LIGHT;
-  const surfaces = theme === "aurora" ? { ...base, ...AURORA_BASE[scheme] } : base;
-  return { ...surfaces, ...ACCENTS[theme][scheme] };
+const SKIES = Object.fromEntries(
+  Object.entries(SPECS).map(([theme, spec]) => [theme, buildSky(spec)]),
+) as Record<AppTheme, Sky>;
+
+export function getPalette(theme: AppTheme): Palette {
+  return PALETTES[theme];
+}
+
+export function getSky(theme: AppTheme): Sky {
+  return SKIES[theme];
 }
 
 /** Faz renkleri — web'deki halka ile aynı eşleme. */
@@ -144,18 +148,17 @@ export function phaseColor(palette: Palette, phase: CyclePhase | null): string {
 
 interface ThemeValue {
   palette: Palette;
-  scheme: "light" | "dark";
+  sky: Sky;
   theme: AppTheme;
 }
 
 const ThemeContext = createContext<ThemeValue | null>(null);
 
 export function ThemeProvider({ theme, children }: { theme: AppTheme | null; children: ReactNode }) {
-  const scheme: "light" | "dark" = useColorScheme() === "dark" ? "dark" : "light";
   const resolved = theme ?? DEFAULT_THEME;
   const value = useMemo(
-    () => ({ palette: getPalette(resolved, scheme), scheme, theme: resolved }),
-    [resolved, scheme],
+    () => ({ palette: getPalette(resolved), sky: getSky(resolved), theme: resolved }),
+    [resolved],
   );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
