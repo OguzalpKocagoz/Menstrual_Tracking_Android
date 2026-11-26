@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { DEFAULT_THEME, isAppTheme, type AppTheme } from "@/core";
 import { isLanguagePreference, type LanguagePreference } from "@/i18n/format";
 import { readSettingsSync, writeSettingSync } from "./db";
+import { DEFAULT_PILL_HOUR, DEFAULT_REMINDER_HOUR } from "./reminder-plan";
 
 /**
  * Cihaz ayarları: tema, varsayılan uzunluklar ve tıbbi uyarının onayı.
@@ -24,6 +25,22 @@ export interface Settings {
   reminderPeriodDays: number | null;
   /** Doğurgan dönemin ilk günü hatırlatılsın mı. */
   reminderFertile: boolean;
+  /** Döngü hatırlatmalarının saati (0–23). Premium; ücretsizde sabit saat kullanılır. */
+  reminderHour: number;
+  /** Her gün aynı saatte hap hatırlatması. Premium. */
+  pillReminder: boolean;
+  pillHour: number;
+  /**
+   * Yalnızca geliştirme sürümünde: ödeme bağlanana kadar premium özellikleri
+   * denemek için. Yayın sürümünde okunmaz (bkz. `premium.ts`).
+   */
+  devPremium: boolean;
+}
+
+export interface ReminderSchedule {
+  reminderHour: number;
+  pillReminder: boolean;
+  pillHour: number;
 }
 
 const KEYS = {
@@ -35,12 +52,21 @@ const KEYS = {
   appLockEnabled: "appLockEnabled",
   reminderPeriodDays: "reminderPeriodDays",
   reminderFertile: "reminderFertile",
+  reminderHour: "reminderHour",
+  pillReminder: "pillReminder",
+  pillHour: "pillHour",
+  devPremium: "devPremium",
 } as const;
 
 function readNumber(value: string | undefined): number | null {
   if (value === undefined) return null;
   const number = Number(value);
   return Number.isInteger(number) ? number : null;
+}
+
+function readHour(value: string | undefined, fallback: number): number {
+  const hour = readNumber(value);
+  return hour !== null && hour >= 0 && hour <= 23 ? hour : fallback;
 }
 
 function loadSettings(): Settings {
@@ -56,6 +82,10 @@ function loadSettings(): Settings {
     appLockEnabled: raw[KEYS.appLockEnabled] === "1",
     reminderPeriodDays: readNumber(raw[KEYS.reminderPeriodDays]),
     reminderFertile: raw[KEYS.reminderFertile] === "1",
+    reminderHour: readHour(raw[KEYS.reminderHour], DEFAULT_REMINDER_HOUR),
+    pillReminder: raw[KEYS.pillReminder] === "1",
+    pillHour: readHour(raw[KEYS.pillHour], DEFAULT_PILL_HOUR),
+    devPremium: raw[KEYS.devPremium] === "1",
   };
 }
 
@@ -67,6 +97,8 @@ interface SettingsValue {
   acceptDisclaimer: () => void;
   setAppLock: (enabled: boolean) => void;
   setReminders: (periodDays: number | null, fertile: boolean) => void;
+  setReminderSchedule: (schedule: Partial<ReminderSchedule>) => void;
+  setDevPremium: (enabled: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsValue | null>(null);
@@ -108,9 +140,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((current) => ({ ...current, reminderPeriodDays: periodDays, reminderFertile: fertile }));
   }, []);
 
+  const setReminderSchedule = useCallback((schedule: Partial<ReminderSchedule>) => {
+    if (schedule.reminderHour !== undefined) writeSettingSync(KEYS.reminderHour, String(schedule.reminderHour));
+    if (schedule.pillReminder !== undefined) writeSettingSync(KEYS.pillReminder, schedule.pillReminder ? "1" : null);
+    if (schedule.pillHour !== undefined) writeSettingSync(KEYS.pillHour, String(schedule.pillHour));
+    setSettings((current) => ({ ...current, ...schedule }));
+  }, []);
+
+  const setDevPremium = useCallback((enabled: boolean) => {
+    writeSettingSync(KEYS.devPremium, enabled ? "1" : null);
+    setSettings((current) => ({ ...current, devPremium: enabled }));
+  }, []);
+
   const value = useMemo(
-    () => ({ settings, setTheme, setLanguage, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders }),
-    [settings, setTheme, setLanguage, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders],
+    () => ({
+      settings,
+      setTheme,
+      setLanguage,
+      setDefaultLengths,
+      acceptDisclaimer,
+      setAppLock,
+      setReminders,
+      setReminderSchedule,
+      setDevPremium,
+    }),
+    [
+      settings,
+      setTheme,
+      setLanguage,
+      setDefaultLengths,
+      acceptDisclaimer,
+      setAppLock,
+      setReminders,
+      setReminderSchedule,
+      setDevPremium,
+    ],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

@@ -13,6 +13,7 @@ import {
 } from "@/core";
 import { Body, Button, Card, Loading, Row, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n";
+import { AdBanner } from "@/lib/ads";
 import { useCycleData, useToday } from "@/lib/data";
 import { useTheme, type Palette } from "@/lib/theme";
 
@@ -59,7 +60,7 @@ export default function CalendarScreen() {
   const move = (delta: number) => setMonth((current) => addMonths(current.year, current.month, delta));
 
   return (
-    <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]}>
+    <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]} footer={<AdBanner />}>
       <Row style={{ justifyContent: "space-between" }}>
         <Button variant="secondary" label="‹" onPress={() => move(-1)} />
         <Text style={{ color: palette.text, fontSize: 18, fontWeight: "700" }}>

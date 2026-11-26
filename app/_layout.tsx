@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NightSky } from "@/components/night-sky";
+import { DEFAULT_THEME, PREMIUM_THEMES } from "@/core";
+import { AdsProvider } from "@/lib/ads";
+import { usePremium } from "@/lib/premium";
 import { I18nProvider, useI18n } from "@/i18n";
 import { AppLockGate } from "@/lib/app-lock";
 import { ReminderSync } from "@/lib/reminder-sync";
@@ -59,6 +62,7 @@ function Navigator() {
         <Stack.Screen name="hosgeldin" options={{ headerShown: false }} />
         <Stack.Screen name="gun/[date]" options={{ title: t.tabs.day }} />
         <Stack.Screen name="ayarlar" options={{ title: t.tabs.settings }} />
+        <Stack.Screen name="premium" options={{ title: t.settings.premiumTitle, presentation: "modal" }} />
       </Stack>
     </NavigationThemeProvider>
   );
@@ -66,13 +70,21 @@ function Navigator() {
 
 function ThemedApp() {
   const { settings } = useSettings();
+  const { isPremium } = usePremium();
+  // Premium tema, abonelik yoksa uygulanmaz; seçim silinmez, yeniden abone
+  // olunca geri gelir.
+  const theme = !isPremium && PREMIUM_THEMES.includes(settings.theme) ? DEFAULT_THEME : settings.theme;
   return (
     <I18nProvider preference={settings.language}>
-    <ThemeProvider theme={settings.theme}>
+    <ThemeProvider theme={theme}>
       <View style={{ flex: 1 }}>
         <NightSky />
         <AppLockGate>
-          <Navigator />
+          {/* Reklam rızası, tıbbi uyarı onaylanmadan sorulmaz: ilk açılışta
+              kullanıcının karşısına önce uygulamanın kendisi çıksın. */}
+          <AdsProvider enabled={settings.disclaimerAccepted}>
+            <Navigator />
+          </AdsProvider>
         </AppLockGate>
       </View>
       {settings.disclaimerAccepted && <ReminderSync />}

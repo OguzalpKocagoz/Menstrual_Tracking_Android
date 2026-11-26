@@ -87,6 +87,9 @@ export const SPECIAL_THEMES: readonly AppTheme[] = ["aurora"];
 
 export const APP_THEMES: readonly AppTheme[] = [...STANDARD_THEMES, ...SPECIAL_THEMES];
 
+/** Premium'a özel temalar. Abonelik bitince uygulama varsayılan temaya döner. */
+export const PREMIUM_THEMES: readonly AppTheme[] = ["aurora"];
+
 export const DEFAULT_THEME: AppTheme = "rose";
 
 /** Özel hesap açıldığında varsayılan olarak atanan tema. */

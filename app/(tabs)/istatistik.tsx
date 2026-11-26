@@ -8,6 +8,7 @@ import {
 } from "@/core";
 import { Body, Card, ErrorText, Heading, Loading, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n";
+import { AdBanner } from "@/lib/ads";
 import { useCycleData, useDeleteCycle } from "@/lib/data";
 import { useTheme } from "@/lib/theme";
 
@@ -54,7 +55,7 @@ export default function StatsScreen() {
   }
 
   return (
-    <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]}>
+    <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]} footer={<AdBanner />}>
       <Card>
         <Heading>{t.stats.cycle}</Heading>
         <Stat label={t.stats.average} value={`${days(stats.averageCycleLength)}${mark}`} />

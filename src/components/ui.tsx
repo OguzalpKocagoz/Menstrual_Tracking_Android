@@ -21,11 +21,14 @@ export function Screen({
   refreshing,
   onRefresh,
   edges = ["top"],
+  footer,
 }: {
   children: ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
   edges?: ("top" | "bottom")[];
+  /** Kaydırılan içeriğin altında sabit duran alan (ör. reklam bandı). */
+  footer?: ReactNode;
 }) {
   const { palette } = useTheme();
   return (
@@ -46,6 +49,7 @@ export function Screen({
       >
         {children}
       </ScrollView>
+      {footer}
     </SafeAreaView>
   );
 }

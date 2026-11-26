@@ -21,6 +21,12 @@ export interface ReminderOptions {
   fertile: boolean;
 }
 
+/** Ücretsiz sürümde hatırlatmaların sabit saati; premium kendi saatini seçer. */
+export const DEFAULT_REMINDER_HOUR = 9;
+export const DEFAULT_PILL_HOUR = 21;
+/** Seçilebilecek saatler. Dakika yok: az ama anlaşılır seçenek. */
+export const REMINDER_HOURS: readonly number[] = [7, 8, 9, 12, 18, 20, 21, 22];
+
 /** Kaç döngü ilerisi zamanlanır. Uygulama her açıldığında plan yenilenir. */
 export const PLANNED_CYCLES = 3;
 

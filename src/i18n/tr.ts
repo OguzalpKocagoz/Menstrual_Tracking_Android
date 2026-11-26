@@ -45,6 +45,8 @@ export const tr = {
     long: (day: number, month: string, year: number) => `${day} ${month} ${year}`,
     short: (day: number, month: string) => `${day} ${month}`,
     monthYear: (month: string, year: number) => `${month} ${year}`,
+    /** Tam saat: "09.00" */
+    time: (hour: number) => `${String(hour).padStart(2, "0")}.00`,
     relative: (days: number) => {
       if (days === 0) return "bugün";
       if (days === 1) return "yarın";
@@ -274,12 +276,24 @@ export const tr = {
     lockPromptOn: "Uygulama kilidini aç",
     lockPromptOff: "Uygulama kilidini kapat",
     lockFailed: "Kilit ayarlanamadı.",
+    adPrivacy: "Reklam gizlilik tercihleri",
     reminders: "Hatırlatmalar",
     beforePeriod: "Adet başlangıcından önce",
     off: "Kapalı",
     fertileStart: "Doğurgan dönem başlarken",
     remindersHint:
-      "Bildirimler sabah 09.00'da gelir. Kilit ekranında görünebilecekleri için metinleri bilerek genel tutulur; adet ya da doğurganlık yazmaz.",
+      "Kilit ekranında görünebilecekleri için bildirim metinleri bilerek genel tutulur; adet ya da doğurganlık yazmaz.",
+    reminderTime: "Bildirim saati",
+    reminderTimeFree: (time: string) => `Ücretsiz sürümde saat sabit: ${time}`,
+    pill: "Günlük hap hatırlatması",
+    pillHint: "Her gün seçtiğin saatte nötr bir bildirim gelir.",
+    pillTime: "Hap saati",
+    premiumLocked: "Bu özellik Premium'a dahil.",
+    premiumTitle: "Premium",
+    premiumActive: "Premium aktif. Teşekkürler!",
+    premiumHint: "Reklamsız kullanım, partner bağlama, ek temalar ve gelişmiş hatırlatmalar.",
+    premiumCta: "Premium'a geç",
+    devPremium: "Geliştirici: Premium'u dene",
     permissionDenied: "Bildirim izni verilmedi. Telefonun ayarlarından Döngüm için bildirimlere izin ver.",
     data: "Verilerin",
     dataHint:
@@ -303,6 +317,32 @@ export const tr = {
     channel: "Hatırlatmalar",
     period: "Takviminde yaklaşan bir gün var.",
     fertile: "Takviminde bugün yeni bir dönem başlıyor.",
+    pill: "Günlük hatırlatma zamanı.",
+  },
+
+  premium: {
+    title: "Döngüm Premium",
+    subtitle: "Döngünü reklamsız takip et, partnerinle paylaş.",
+    features: [
+      { title: "Reklamsız", body: "Hiçbir ekranda reklam görmezsin." },
+      {
+        title: "Partner bağlama",
+        body: "Partnerin döngünü kendi telefonundan takip eder; neyin paylaşılacağına sen karar verirsin. Çiftten biri Premium ise ikisine de açıktır. (Yakında)",
+      },
+      { title: "Ek temalar", body: "Aurora ve yeni gelecek temalar." },
+      { title: "Gelişmiş hatırlatmalar", body: "Bildirim saatini seç, günlük hap hatırlatması kur." },
+    ],
+    monthly: "Aylık",
+    yearly: "Yıllık",
+    bestValue: "En avantajlı",
+    priceFromStore: "Fiyat Google Play'de görünür",
+    trial: "İlk 7 gün ücretsiz. Deneme bitmeden iptal edersen ücret alınmaz.",
+    subscribe: "7 gün ücretsiz dene",
+    comingSoon: "Satın alma, uygulama Google Play'de yayınlandığında açılacak.",
+    restore: "Satın alımları geri yükle",
+    terms:
+      "Abonelik, iptal edilene kadar seçtiğin dönemin sonunda otomatik yenilenir. Google Play > Abonelikler'den istediğin zaman iptal edebilirsin.",
+    active: "Premium aktif. Bütün özellikler açık.",
   },
 };
 

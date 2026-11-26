@@ -9,6 +9,7 @@ import {
 } from "@/core";
 import { Body, Card, ContraceptionNotice, Heading, Loading, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n";
+import { AdBanner } from "@/lib/ads";
 import { useCycleData, useToday } from "@/lib/data";
 import { useTheme } from "@/lib/theme";
 
@@ -43,7 +44,7 @@ export default function FertilityScreen() {
   if (isLoading) return <Loading />;
 
   return (
-    <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]}>
+    <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]} footer={<AdBanner />}>
       {!view ? (
         <Card>
           <Body>{t.fertility.needPeriod}</Body>

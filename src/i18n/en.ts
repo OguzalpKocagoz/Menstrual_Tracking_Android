@@ -25,6 +25,7 @@ export const en: Messages = {
     long: (day, month, year) => `${month} ${day}, ${year}`,
     short: (day, month) => `${month.slice(0, 3)} ${day}`,
     monthYear: (month, year) => `${month} ${year}`,
+    time: (hour) => `${hour % 12 || 12}:00 ${hour < 12 ? "AM" : "PM"}`,
     relative: (days) => {
       if (days === 0) return "today";
       if (days === 1) return "tomorrow";
@@ -246,12 +247,24 @@ export const en: Messages = {
     lockPromptOn: "Turn on app lock",
     lockPromptOff: "Turn off app lock",
     lockFailed: "Couldn't change the app lock.",
+    adPrivacy: "Ad privacy choices",
     reminders: "Reminders",
     beforePeriod: "Before your period starts",
     off: "Off",
     fertileStart: "When the fertile window starts",
     remindersHint:
-      "Reminders arrive at 9:00 AM. Because they can appear on the lock screen, their text is deliberately vague and never mentions periods or fertility.",
+      "Because reminders can appear on the lock screen, their text is deliberately vague and never mentions periods or fertility.",
+    reminderTime: "Reminder time",
+    reminderTimeFree: (time) => `Fixed at ${time} in the free version.`,
+    pill: "Daily pill reminder",
+    pillHint: "A neutral notification arrives every day at the time you choose.",
+    pillTime: "Pill time",
+    premiumLocked: "This feature is part of Premium.",
+    premiumTitle: "Premium",
+    premiumActive: "Premium is active. Thank you!",
+    premiumHint: "No ads, partner sharing, extra themes and advanced reminders.",
+    premiumCta: "Get Premium",
+    devPremium: "Developer: try Premium",
     permissionDenied: "Notifications aren't allowed. Allow notifications for Döngüm in your phone's settings.",
     data: "Your data",
     dataHint:
@@ -270,5 +283,31 @@ export const en: Messages = {
     channel: "Reminders",
     period: "There's an upcoming day in your calendar.",
     fertile: "Something new starts in your calendar today.",
+    pill: "Time for your daily reminder.",
+  },
+
+  premium: {
+    title: "Döngüm Premium",
+    subtitle: "Track your cycle without ads and share it with your partner.",
+    features: [
+      { title: "No ads", body: "You won't see ads on any screen." },
+      {
+        title: "Partner sharing",
+        body: "Your partner follows your cycle on their own phone; you decide what's shared. If either of you has Premium, it's unlocked for both. (Coming soon)",
+      },
+      { title: "Extra themes", body: "Aurora and new themes as they arrive." },
+      { title: "Advanced reminders", body: "Choose your reminder time and set a daily pill reminder." },
+    ],
+    monthly: "Monthly",
+    yearly: "Yearly",
+    bestValue: "Best value",
+    priceFromStore: "Price shown on Google Play",
+    trial: "First 7 days free. Cancel before the trial ends and you won't be charged.",
+    subscribe: "Try 7 days free",
+    comingSoon: "Purchases open once the app is live on Google Play.",
+    restore: "Restore purchases",
+    terms:
+      "Your subscription renews automatically at the end of each period until you cancel. Cancel anytime in Google Play > Subscriptions.",
+    active: "Premium is active. Every feature is unlocked.",
   },
 };

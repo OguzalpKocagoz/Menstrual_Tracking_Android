@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useI18n } from "@/i18n";
 import { useCycleData, useToday } from "./data";
-import { planReminders } from "./reminder-plan";
+import { usePremium } from "./premium";
+import { DEFAULT_REMINDER_HOUR, planReminders } from "./reminder-plan";
 import { syncReminders } from "./reminders";
 import { useSettings } from "./settings";
 
@@ -15,7 +16,12 @@ export function ReminderSync() {
   const { data } = useCycleData();
   const today = useToday();
   const { t } = useI18n();
+  const { isPremium } = usePremium();
   const { reminderPeriodDays, reminderFertile } = settings;
+  // Saat seçimi ve hap hatırlatması premium: abonelik bitince sessizce
+  // ücretsiz davranışa döner (sabit saat, hap yok), kayıtlı tercih silinmez.
+  const hour = isPremium ? settings.reminderHour : DEFAULT_REMINDER_HOUR;
+  const pillHour = isPremium && settings.pillReminder ? settings.pillHour : null;
 
   useEffect(() => {
     if (!data) return;
@@ -25,13 +31,17 @@ export function ReminderSync() {
     });
     // Zamanlama başarısız olursa uygulama çalışmaya devam eder; bir sonraki
     // değişiklikte yeniden denenir.
-    syncReminders(plan, {
-      title: t.common.appName,
-      channel: t.notifications.channel,
-      body: { period: t.notifications.period, fertile: t.notifications.fertile },
-    }).catch(() => {});
+    syncReminders(
+      plan,
+      { hour, pillHour },
+      {
+        title: t.common.appName,
+        channel: t.notifications.channel,
+        body: { period: t.notifications.period, fertile: t.notifications.fertile, pill: t.notifications.pill },
+      },
+    ).catch(() => {});
     // Dil değişince zamanlanmış bildirimler de yeni dilde yeniden kurulur.
-  }, [data, today, reminderPeriodDays, reminderFertile, t]);
+  }, [data, today, reminderPeriodDays, reminderFertile, hour, pillHour, t]);
 
   return null;
 }

@@ -1,11 +1,15 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, Switch, Text, View } from "react-native";
-import { APP_THEMES } from "@/core";
+import { APP_THEMES, PREMIUM_THEMES } from "@/core";
 import { ShapeGlyph } from "@/components/night-sky";
 import { Body, Button, Card, Chip, ErrorText, Field, Heading, Row, Screen } from "@/components/ui";
+import { useAds } from "@/lib/ads";
 import { authenticate, checkLockAvailability } from "@/lib/app-lock";
 import { useDeleteAllRecords } from "@/lib/data";
 import { LOCALE_NAMES, LOCALES, useI18n, type LanguagePreference } from "@/i18n";
+import { usePremium } from "@/lib/premium";
+import { DEFAULT_REMINDER_HOUR, REMINDER_HOURS } from "@/lib/reminder-plan";
 import { requestReminderPermission } from "@/lib/reminders";
 import { parseLength } from "@/lib/rules";
 import { useSettings } from "@/lib/settings";
@@ -40,8 +44,21 @@ function ToggleRow({
 }
 
 export default function SettingsScreen() {
-  const { settings, setTheme, setLanguage, setDefaultLengths, setAppLock, setReminders } = useSettings();
+  const {
+    settings,
+    setTheme,
+    setLanguage,
+    setDefaultLengths,
+    setAppLock,
+    setReminders,
+    setReminderSchedule,
+    setDevPremium,
+  } = useSettings();
   const { t, errorText } = useI18n();
+  const { isPremium } = usePremium();
+  const router = useRouter();
+  const openPremium = () => router.push("/premium");
+  const ads = useAds();
   const [lockError, setLockError] = useState<string | null>(null);
   const [reminderError, setReminderError] = useState<string | null>(null);
   const { palette } = useTheme();
@@ -92,6 +109,15 @@ export default function SettingsScreen() {
     setReminders(periodDays, fertile);
   }
 
+  async function togglePill(enable: boolean) {
+    setReminderError(null);
+    if (enable && !(await requestReminderPermission(t.notifications.channel).catch(() => false))) {
+      setReminderError(t.settings.permissionDenied);
+      return;
+    }
+    setReminderSchedule({ pillReminder: enable });
+  }
+
   function confirmDeleteAll() {
     Alert.alert(t.settings.deleteAll, t.settings.deleteAllBody, [
       { text: t.common.cancel, style: "cancel" },
@@ -102,6 +128,12 @@ export default function SettingsScreen() {
   return (
     <Screen edges={[]}>
       <Card>
+        <Heading>{t.settings.premiumTitle}</Heading>
+        <Body muted>{isPremium ? t.settings.premiumActive : t.settings.premiumHint}</Body>
+        {!isPremium && <Button label={t.settings.premiumCta} onPress={openPremium} />}
+      </Card>
+
+      <Card>
         <Heading>{t.settings.theme}</Heading>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
           {APP_THEMES.map((theme) => {
@@ -109,11 +141,12 @@ export default function SettingsScreen() {
             // parıltı rengi ve o temada kayan şekil.
             const preview = getPalette(theme);
             const sky = getSky(theme);
-            const selected = settings.theme === theme;
+            const selected = settings.theme === theme && (isPremium || !PREMIUM_THEMES.includes(theme));
+            const locked = !isPremium && PREMIUM_THEMES.includes(theme);
             return (
               <Pressable
                 key={theme}
-                onPress={() => setTheme(theme)}
+                onPress={() => (locked ? openPremium() : setTheme(theme))}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 accessibilityLabel={t.settings.themeA11y(t.labels.theme[theme])}
@@ -158,6 +191,9 @@ export default function SettingsScreen() {
                     }}
                   />
                   <ShapeGlyph shape={sky.shapes[0] ?? "sparkle"} color={sky.shapeColor} size={26} />
+                  {locked && (
+                    <Text style={{ position: "absolute", right: 4, bottom: 2, fontSize: 13 }}>🔒</Text>
+                  )}
                 </View>
                 <Text style={{ color: palette.text, fontWeight: selected ? "700" : "400" }}>
                   {t.labels.theme[theme]}
@@ -215,6 +251,15 @@ export default function SettingsScreen() {
         />
         <Body muted>{t.settings.appLockHint}</Body>
         <ErrorText message={lockError} />
+        {ads.privacyOptionsRequired && (
+          <Button
+            variant="secondary"
+            label={t.settings.adPrivacy}
+            onPress={() => {
+              ads.openPrivacyOptions().catch(() => {});
+            }}
+          />
+        )}
       </Card>
 
       <Card>
@@ -235,6 +280,51 @@ export default function SettingsScreen() {
           value={settings.reminderFertile}
           onChange={(value) => changeReminders(settings.reminderPeriodDays, value)}
         />
+
+        <Heading>{t.settings.reminderTime}</Heading>
+        {isPremium ? (
+          <Row>
+            {REMINDER_HOURS.map((hour) => (
+              <Chip
+                key={hour}
+                label={t.dates.time(hour)}
+                selected={settings.reminderHour === hour}
+                onPress={() => setReminderSchedule({ reminderHour: hour })}
+              />
+            ))}
+          </Row>
+        ) : (
+          <>
+            <Body muted>{t.settings.reminderTimeFree(t.dates.time(DEFAULT_REMINDER_HOUR))}</Body>
+            <Button variant="link" label={`🔒 ${t.settings.premiumLocked}`} onPress={openPremium} />
+          </>
+        )}
+
+        <Heading>{t.settings.pill}</Heading>
+        {isPremium ? (
+          <>
+            <ToggleRow label={t.settings.pill} value={settings.pillReminder} onChange={togglePill} />
+            {settings.pillReminder && (
+              <>
+                <Body muted>{t.settings.pillTime}</Body>
+                <Row>
+                  {REMINDER_HOURS.map((hour) => (
+                    <Chip
+                      key={hour}
+                      label={t.dates.time(hour)}
+                      selected={settings.pillHour === hour}
+                      onPress={() => setReminderSchedule({ pillHour: hour })}
+                    />
+                  ))}
+                </Row>
+              </>
+            )}
+            <Body muted>{t.settings.pillHint}</Body>
+          </>
+        ) : (
+          <Button variant="link" label={`🔒 ${t.settings.premiumLocked}`} onPress={openPremium} />
+        )}
+
         <Body muted>{t.settings.remindersHint}</Body>
         <ErrorText message={reminderError} />
       </Card>
@@ -252,6 +342,13 @@ export default function SettingsScreen() {
       </Card>
 
       <Body muted>{t.disclaimer}</Body>
+
+      {/* Yalnızca geliştirme sürümünde: ödeme bağlanana kadar premium'u denemek için. */}
+      {__DEV__ && (
+        <Card>
+          <ToggleRow label={t.settings.devPremium} value={settings.devPremium} onChange={setDevPremium} />
+        </Card>
+      )}
     </Screen>
   );
 }
