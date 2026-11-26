@@ -4,7 +4,6 @@ import {
   assertPeriodRange,
   assertStartDate,
   capturePrediction,
-  errorMessage,
   isEmptyLog,
   parseLength,
   sanitizeLog,
@@ -37,14 +36,14 @@ describe("capturePrediction", () => {
 
 describe("tarih kuralları", () => {
   it("gelecek tarihe başlangıç girilemez", () => {
-    expect(() => assertStartDate("2026-11-27", "2026-11-26")).toThrow(/Gelecek/);
+    expect(() => assertStartDate("2026-11-27", "2026-11-26")).toThrow(/futureStart/);
     expect(() => assertStartDate("2026-11-26", "2026-11-26")).not.toThrow();
   });
 
   it("bitiş başlangıçtan önce olamaz ve kanama 12 günü geçemez", () => {
-    expect(() => assertPeriodRange("2026-11-10", "2026-11-09")).toThrow(/önce/);
+    expect(() => assertPeriodRange("2026-11-10", "2026-11-09")).toThrow(/endBeforeStart/);
     expect(() => assertPeriodRange("2026-11-10", "2026-11-21")).not.toThrow();
-    expect(() => assertPeriodRange("2026-11-10", "2026-11-22")).toThrow(/12/);
+    expect(() => assertPeriodRange("2026-11-10", "2026-11-22")).toThrow(/periodTooLong/);
     expect(() => assertPeriodRange("2026-11-10", null)).not.toThrow();
   });
 });
@@ -61,7 +60,7 @@ describe("günlük kaydı", () => {
   });
 
   it("geçersiz sıcaklığı reddeder", () => {
-    expect(() => sanitizeLog({ ...EMPTY, temperatureC: 50 })).toThrow(/34-43/);
+    expect(() => sanitizeLog({ ...EMPTY, temperatureC: 50 })).toThrow(/temperatureRange/);
   });
 
   it("boş kayıt boş sayılır", () => {
@@ -70,21 +69,20 @@ describe("günlük kaydı", () => {
   });
 });
 
-describe("parseLength ve errorMessage", () => {
+describe("parseLength", () => {
   it("boş değer null, aralık dışı kullanıcı hatası", () => {
-    expect(parseLength("", 15, 60, "Döngü uzunluğu")).toBeNull();
-    expect(parseLength("28", 15, 60, "Döngü uzunluğu")).toBe(28);
-    expect(() => parseLength("70", 15, 60, "Döngü uzunluğu")).toThrow(/15–60/);
+    expect(parseLength("", 15, 60, "cycleLength")).toBeNull();
+    expect(parseLength("28", 15, 60, "cycleLength")).toBe(28);
+    expect(() => parseLength("70", 15, 60, "cycleLength")).toThrow(/lengthRange/);
   });
 
-  it("yalnızca kullanıcı hatalarının metnini gösterir", () => {
+  it("hata, metni dile göre üretilebilsin diye alanı ve sınırları taşır", () => {
     let caught: unknown;
     try {
-      parseLength("abc", 1, 12, "Regl süresi");
+      parseLength("abc", 1, 12, "periodLength");
     } catch (error) {
       caught = error;
     }
-    expect(errorMessage(caught)).toMatch(/Regl süresi/);
-    expect(errorMessage(new Error("SQLITE_IOERR /data/data/..."), "Genel")).toBe("Genel");
+    expect(caught).toMatchObject({ code: "lengthRange", params: { field: "periodLength", min: 1, max: 12 } });
   });
 });

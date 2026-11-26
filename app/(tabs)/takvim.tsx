@@ -6,14 +6,13 @@ import {
   buildDayMarkers,
   buildMonthGrid,
   computeCycleStats,
-  formatMonthTR,
   getDayOfMonth,
   getMonth,
   getYear,
-  WEEKDAY_LABELS_TR,
   type DayMarker,
 } from "@/core";
 import { Body, Button, Card, Loading, Row, Screen } from "@/components/ui";
+import { useI18n } from "@/i18n";
 import { useCycleData, useToday } from "@/lib/data";
 import { useTheme, type Palette } from "@/lib/theme";
 
@@ -38,6 +37,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const today = useToday();
   const { palette } = useTheme();
+  const { t, format } = useI18n();
   const { data, isLoading, isRefetching, refetch } = useCycleData();
   const [month, setMonth] = useState(() => ({ year: getYear(today), month: getMonth(today) }));
 
@@ -63,14 +63,14 @@ export default function CalendarScreen() {
       <Row style={{ justifyContent: "space-between" }}>
         <Button variant="secondary" label="‹" onPress={() => move(-1)} />
         <Text style={{ color: palette.text, fontSize: 18, fontWeight: "700" }}>
-          {formatMonthTR(month.year, month.month)}
+          {format.month(month.year, month.month)}
         </Text>
         <Button variant="secondary" label="›" onPress={() => move(1)} />
       </Row>
 
       <Card style={{ padding: 10, gap: 6 }}>
         <View style={styles.week}>
-          {WEEKDAY_LABELS_TR.map((label) => (
+          {t.dates.weekdaysShort.map((label) => (
             <Text key={label} style={[styles.weekday, { color: palette.textMuted }]}>
               {label}
             </Text>
@@ -87,7 +87,7 @@ export default function CalendarScreen() {
                   key={date}
                   onPress={() => router.push(`/gun/${date}`)}
                   style={styles.cell}
-                  accessibilityLabel={date}
+                  accessibilityLabel={format.date(date)}
                 >
                   <View
                     style={[
@@ -114,11 +114,11 @@ export default function CalendarScreen() {
       </Card>
 
       <Card style={{ gap: 8 }}>
-        <Legend color={palette.period} label="Adet (kayıt)" />
-        <Legend color={palette.periodSoft} border={palette.predicted} label="Tahmini adet" dashed />
-        <Legend color={palette.fertileSoft} label="Doğurgan pencere" />
-        <Legend color={palette.ovulation} label="Tahmini yumurtlama" />
-        <Body muted>Bir güne dokunarak kayıt ekleyebilirsin.</Body>
+        <Legend color={palette.period} label={t.calendar.legendPeriod} />
+        <Legend color={palette.periodSoft} border={palette.predicted} label={t.calendar.legendPredicted} dashed />
+        <Legend color={palette.fertileSoft} label={t.calendar.legendFertile} />
+        <Legend color={palette.ovulation} label={t.calendar.legendOvulation} />
+        <Body muted>{t.calendar.tapHint}</Body>
       </Card>
     </Screen>
   );

@@ -3,7 +3,6 @@ import {
   computeCycleStats,
   daysBetween,
   FLOW_INTENSITIES,
-  isUserError,
   MAX_PLAUSIBLE_PERIOD_LENGTH,
   MOODS,
   predictUpcomingPeriods,
@@ -67,16 +66,16 @@ export function capturePrediction(
 }
 
 export function assertStartDate(date: ISODate, today: ISODate): void {
-  if (date > today) throw new UserError("Gelecek bir tarihe adet başlangıcı girilemez.");
+  if (date > today) throw new UserError("futureStart");
 }
 
 export function assertPeriodRange(startDate: ISODate, periodEndDate: ISODate | null): void {
   if (!periodEndDate) return;
   if (periodEndDate < startDate) {
-    throw new UserError("Kanama bitişi başlangıçtan önce olamaz.");
+    throw new UserError("endBeforeStart");
   }
   if (periodEndDate > addDays(startDate, MAX_PLAUSIBLE_PERIOD_LENGTH - 1)) {
-    throw new UserError(`Kanama ${MAX_PLAUSIBLE_PERIOD_LENGTH} günden uzun olamaz.`);
+    throw new UserError("periodTooLong", { max: MAX_PLAUSIBLE_PERIOD_LENGTH });
   }
 }
 
@@ -85,14 +84,14 @@ const MAX_NOTE_LENGTH = 2000;
 /** Formdan gelen günlük kaydını süzer; geçersiz değerde `UserError` fırlatır. */
 export function sanitizeLog(input: DailyLogInput): DailyLogInput {
   if (input.flow !== null && !FLOW_INTENSITIES.includes(input.flow as FlowIntensity)) {
-    throw new UserError("Geçersiz kanama yoğunluğu.");
+    throw new UserError("invalidFlow");
   }
   if (input.mood !== null && !MOODS.includes(input.mood as Mood)) {
-    throw new UserError("Geçersiz ruh hâli.");
+    throw new UserError("invalidMood");
   }
   const temperature = input.temperatureC;
   if (temperature !== null && (!Number.isFinite(temperature) || temperature < 34 || temperature > 43)) {
-    throw new UserError("Sıcaklık 34-43 °C arasında olmalı.");
+    throw new UserError("temperatureRange");
   }
 
   const notes = input.notes?.trim().slice(0, MAX_NOTE_LENGTH) || null;
@@ -115,21 +114,16 @@ export function isEmptyLog(log: DailyLogInput): boolean {
 }
 
 /** Varsayılan uzunluk alanı: boş → null, aralık dışı → `UserError`. */
-export function parseLength(value: string, min: number, max: number, label: string): number | null {
+export function parseLength(
+  value: string,
+  min: number,
+  max: number,
+  field: "cycleLength" | "periodLength",
+): number | null {
   if (!value.trim()) return null;
   const number = Number(value);
   if (!Number.isInteger(number) || number < min || number > max) {
-    throw new UserError(`${label} ${min}–${max} gün arasında olmalı.`);
+    throw new UserError("lengthRange", { field, min, max });
   }
   return number;
-}
-
-/**
- * Ekranda gösterilecek hata metni.
- *
- * Yalnızca bilerek yazılmış `UserError` mesajları gösterilir; beklenmeyen bir
- * arızanın (ör. SQLite) ham metni kullanıcıya çıkmaz.
- */
-export function errorMessage(error: unknown, fallback = "Beklenmeyen bir hata oluştu."): string {
-  return isUserError(error) ? error.message : fallback;
 }

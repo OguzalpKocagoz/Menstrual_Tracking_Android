@@ -2,7 +2,7 @@ import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Body, Button, Card, Screen, Title } from "@/components/ui";
-import { MEDICAL_DISCLAIMER } from "@/lib/disclaimer";
+import { useI18n } from "@/i18n";
 import { useSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 
@@ -11,6 +11,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const { settings, acceptDisclaimer } = useSettings();
   const { palette } = useTheme();
+  const { t } = useI18n();
   const [accepted, setAccepted] = useState(false);
 
   if (settings.disclaimerAccepted) return <Redirect href="/" />;
@@ -23,15 +24,12 @@ export default function WelcomeScreen() {
   return (
     <Screen>
       <View style={{ height: 32 }} />
-      <Title>Döngüm</Title>
-      <Body muted>Adet döngünü takip et, sıradaki dönemini önceden gör.</Body>
+      <Title>{t.common.appName}</Title>
+      <Body muted>{t.welcome.tagline}</Body>
 
       <Card>
-        <Body>{MEDICAL_DISCLAIMER}</Body>
-        <Body muted>
-          Kayıtların yalnızca bu telefonda saklanır; hesap açman gerekmez ve verilerin hiçbir sunucuya
-          gönderilmez.
-        </Body>
+        <Body>{t.disclaimer}</Body>
+        <Body muted>{t.welcome.localData}</Body>
 
         <Pressable
           onPress={() => setAccepted((value) => !value)}
@@ -53,10 +51,10 @@ export default function WelcomeScreen() {
           >
             {accepted && <Text style={{ color: palette.onBrand, fontWeight: "700" }}>✓</Text>}
           </View>
-          <Text style={{ color: palette.text, flex: 1 }}>Okudum ve anladım.</Text>
+          <Text style={{ color: palette.text, flex: 1 }}>{t.welcome.understood}</Text>
         </Pressable>
 
-        <Button label="Başla" onPress={start} disabled={!accepted} />
+        <Button label={t.welcome.start} onPress={start} disabled={!accepted} />
       </Card>
     </Screen>
   );

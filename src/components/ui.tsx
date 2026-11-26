@@ -13,6 +13,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useI18n } from "@/i18n";
 import { useTheme } from "@/lib/theme";
 
 export function Screen({
@@ -209,11 +210,11 @@ export function Loading() {
 /** Doğurganlık bilgisinin her gösterildiği yerde zorunlu uyarı. */
 export function ContraceptionNotice() {
   const { palette } = useTheme();
+  const { t } = useI18n();
   return (
     <View style={[styles.notice, { backgroundColor: palette.ovulationSoft }]}>
       <Text style={{ color: palette.text, fontSize: 13, lineHeight: 18 }}>
-        Bu bir tahmindir; gerçek yumurtlama günü döngüden döngüye kayar. Doğum kontrolü amacıyla
-        kullanılamaz.
+        {t.contraception}
       </Text>
     </View>
   );

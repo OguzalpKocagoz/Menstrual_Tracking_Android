@@ -10,25 +10,9 @@ export const FLOW_INTENSITIES: readonly FlowIntensity[] = [
   "heavy",
 ];
 
-export const FLOW_LABELS_TR: Record<FlowIntensity, string> = {
-  spotting: "Lekelenme",
-  light: "Az",
-  medium: "Orta",
-  heavy: "Yoğun",
-};
-
 export type Mood = "great" | "good" | "neutral" | "low" | "irritable" | "anxious";
 
 export const MOODS: readonly Mood[] = ["great", "good", "neutral", "low", "irritable", "anxious"];
-
-export const MOOD_LABELS_TR: Record<Mood, string> = {
-  great: "Çok iyi",
-  good: "İyi",
-  neutral: "Normal",
-  low: "Düşük",
-  irritable: "Sinirli",
-  anxious: "Kaygılı",
-};
 
 export type Symptom =
   | "cramps"
@@ -54,19 +38,6 @@ export const SYMPTOMS: readonly Symptom[] = [
   "insomnia",
   "cravings",
 ];
-
-export const SYMPTOM_LABELS_TR: Record<Symptom, string> = {
-  cramps: "Kramp",
-  headache: "Baş ağrısı",
-  bloating: "Şişkinlik",
-  backache: "Sırt/bel ağrısı",
-  tender_breasts: "Göğüs hassasiyeti",
-  acne: "Sivilce",
-  fatigue: "Yorgunluk",
-  nausea: "Bulantı",
-  insomnia: "Uykusuzluk",
-  cravings: "Yeme isteği",
-};
 
 /**
  * Bir adet döngüsü. `startDate` regl kanamasının ilk günüdür ve döngünün de
@@ -121,14 +92,6 @@ export const DEFAULT_THEME: AppTheme = "rose";
 /** Özel hesap açıldığında varsayılan olarak atanan tema. */
 export const DEFAULT_SPECIAL_THEME: AppTheme = "aurora";
 
-export const THEME_LABELS_TR: Record<AppTheme, string> = {
-  rose: "Gül",
-  bloom: "Lavanta",
-  ocean: "Okyanus",
-  forest: "Orman",
-  aurora: "Aurora",
-};
-
 export function isAppTheme(value: unknown): value is AppTheme {
   return typeof value === "string" && (APP_THEMES as readonly string[]).includes(value);
 }
@@ -175,33 +138,7 @@ export interface PhaseRange {
   dayCount: number;
 }
 
-/**
- * Fazların adları. Tıbbi terim esas alınır çünkü kullanıcı kaynaklarda bu
- * adlarla karşılaşır; gündelik karşılığı `PHASE_ALIAS_TR` ile parantez içinde
- * gösterilir.
- */
-export const PHASE_LABELS_TR: Record<CyclePhase, string> = {
-  menstrual: "Menstrüasyon",
-  follicular: "Foliküler faz",
-  ovulation: "Ovülasyon",
-  luteal: "Luteal faz",
-};
-
 /** Gündelik karşılığı; tıbbi adla aynı olan fazlarda null. */
-export const PHASE_ALIAS_TR: Record<CyclePhase, string | null> = {
-  menstrual: "Regl dönemi",
-  follicular: null,
-  ovulation: "Yumurtlama",
-  luteal: null,
-};
-
-export const PHASE_DESCRIPTIONS_TR: Record<CyclePhase, string> = {
-  menstrual: "Kanama sürüyor. Enerjin düşük olabilir, dinlenmeye özen göster.",
-  follicular: "Enerjinin genellikle yükseldiği dönem.",
-  ovulation: "Yumurtlama zamanı. Gebelik ihtimalinin en yüksek olduğu günler.",
-  luteal: "Adet öncesi dönem. Şişkinlik ve ruh hâli değişimleri görülebilir.",
-};
-
 
 export interface CycleStats {
   /** Gözlemlenen döngü uzunluklarının ortalaması (gün). */
@@ -240,14 +177,6 @@ export interface PeriodPrediction {
  * yükselir ve yumurtlamadan sonra hızla düşer.
  */
 export type FertilityLevel = "peak" | "high" | "medium" | "low" | "none";
-
-export const FERTILITY_LABELS_TR: Record<FertilityLevel, string> = {
-  peak: "En yüksek",
-  high: "Yüksek",
-  medium: "Orta",
-  low: "Düşük",
-  none: "Çok düşük",
-};
 
 export interface FertileDay {
   date: ISODate;

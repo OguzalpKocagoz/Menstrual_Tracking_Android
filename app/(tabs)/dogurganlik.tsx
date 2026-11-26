@@ -2,15 +2,13 @@ import { useMemo } from "react";
 import { Text, View } from "react-native";
 import {
   computeCycleStats,
-  FERTILITY_LABELS_TR,
-  formatRelativeDaysTR,
-  formatShortDateTR,
   getDaysUntilFertileWindow,
   getFertileWindowDays,
   predictUpcomingPeriods,
   type FertilityLevel,
 } from "@/core";
 import { Body, Card, ContraceptionNotice, Heading, Loading, Screen } from "@/components/ui";
+import { useI18n } from "@/i18n";
 import { useCycleData, useToday } from "@/lib/data";
 import { useTheme } from "@/lib/theme";
 
@@ -26,6 +24,7 @@ const LEVEL_WIDTH: Record<FertilityLevel, number> = {
 export default function FertilityScreen() {
   const today = useToday();
   const { palette } = useTheme();
+  const { t, format } = useI18n();
   const { data, isLoading, isRefetching, refetch } = useCycleData();
 
   const view = useMemo(() => {
@@ -47,42 +46,43 @@ export default function FertilityScreen() {
     <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]}>
       {!view ? (
         <Card>
-          <Body>Doğurgan pencereyi tahmin etmek için önce bir adet başlangıcı kaydet.</Body>
+          <Body>{t.fertility.needPeriod}</Body>
         </Card>
       ) : (
         <>
           <Card>
-            <Heading>Doğurgan pencere</Heading>
+            <Heading>{t.fertility.window}</Heading>
             <Body>
-              {formatShortDateTR(view.prediction.fertileWindowStart)} –{" "}
-              {formatShortDateTR(view.prediction.fertileWindowEnd)}
+              {format.shortDate(view.prediction.fertileWindowStart)} –{" "}
+              {format.shortDate(view.prediction.fertileWindowEnd)}
             </Body>
             <Body muted>
               {view.until > 0
-                ? `Pencere ${formatRelativeDaysTR(view.until)} açılıyor.`
+                ? t.fertility.opensIn(view.until)
                 : view.until === 0
-                  ? "Şu an doğurgan penceredesin."
-                  : "Bu döngünün penceresi geçti."}
+                  ? t.fertility.inWindow
+                  : t.fertility.passed}
             </Body>
             <Body>
-              Tahmini yumurtlama: <Text style={{ fontWeight: "700" }}>{formatShortDateTR(view.prediction.ovulationDate)}</Text>
+              {t.fertility.ovulation}
+              <Text style={{ fontWeight: "700" }}>{format.shortDate(view.prediction.ovulationDate)}</Text>
             </Body>
-            {view.usingDefaults && <Body muted>Tahmini değer: henüz yeterli kayıt yok.</Body>}
+            {view.usingDefaults && <Body muted>{t.fertility.estimateNote}</Body>}
           </Card>
 
           <Card>
-            <Heading>Günlere göre ihtimal</Heading>
+            <Heading>{t.fertility.byDay}</Heading>
             {view.days.map((day) => {
               const color = day.isOvulation ? palette.ovulation : palette.fertile;
               return (
                 <View key={day.date} style={{ gap: 4 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <Text style={{ color: palette.text, fontWeight: day.isOvulation ? "700" : "400" }}>
-                      {formatShortDateTR(day.date)}
-                      {day.isOvulation ? " · yumurtlama" : ""}
-                      {day.date === today ? " · bugün" : ""}
+                      {format.shortDate(day.date)}
+                      {day.isOvulation ? t.fertility.ovulationTag : ""}
+                      {day.date === today ? t.fertility.todayTag : ""}
                     </Text>
-                    <Text style={{ color: palette.textMuted }}>{FERTILITY_LABELS_TR[day.level]}</Text>
+                    <Text style={{ color: palette.textMuted }}>{t.labels.fertility[day.level]}</Text>
                   </View>
                   <View style={{ height: 8, borderRadius: 4, backgroundColor: palette.surfaceMuted }}>
                     <View

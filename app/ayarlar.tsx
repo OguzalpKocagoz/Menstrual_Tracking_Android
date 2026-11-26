@@ -1,23 +1,20 @@
 import { useState } from "react";
 import { Alert, Pressable, Switch, Text, View } from "react-native";
-import { APP_THEMES, THEME_LABELS_TR } from "@/core";
+import { APP_THEMES } from "@/core";
 import { ShapeGlyph } from "@/components/night-sky";
 import { Body, Button, Card, Chip, ErrorText, Field, Heading, Row, Screen } from "@/components/ui";
 import { authenticate, checkLockAvailability } from "@/lib/app-lock";
 import { useDeleteAllRecords } from "@/lib/data";
+import { LOCALE_NAMES, LOCALES, useI18n, type LanguagePreference } from "@/i18n";
 import { requestReminderPermission } from "@/lib/reminders";
-import { MEDICAL_DISCLAIMER } from "@/lib/disclaimer";
-import { errorMessage, parseLength } from "@/lib/rules";
+import { parseLength } from "@/lib/rules";
 import { useSettings } from "@/lib/settings";
 import { getPalette, getSky, useTheme } from "@/lib/theme";
-import { isIntlTimeZoneSupported } from "@/lib/today";
 
-const PERIOD_REMINDER_CHOICES: { label: string; days: number | null }[] = [
-  { label: "Kapalı", days: null },
-  { label: "1 gün", days: 1 },
-  { label: "2 gün", days: 2 },
-  { label: "3 gün", days: 3 },
-];
+/** Adetten kaç gün önce hatırlatılsın; null → kapalı. */
+const PERIOD_REMINDER_CHOICES: readonly (number | null)[] = [null, 1, 2, 3];
+
+const LANGUAGE_CHOICES: readonly LanguagePreference[] = ["auto", ...LOCALES];
 
 function ToggleRow({
   label,
@@ -43,7 +40,8 @@ function ToggleRow({
 }
 
 export default function SettingsScreen() {
-  const { settings, setTheme, setDefaultLengths, setAppLock, setReminders } = useSettings();
+  const { settings, setTheme, setLanguage, setDefaultLengths, setAppLock, setReminders } = useSettings();
+  const { t, errorText } = useI18n();
   const [lockError, setLockError] = useState<string | null>(null);
   const [reminderError, setReminderError] = useState<string | null>(null);
   const { palette } = useTheme();
@@ -58,12 +56,12 @@ export default function SettingsScreen() {
     setSaved(false);
     try {
       setDefaultLengths(
-        parseLength(cycleLength, 15, 60, "Döngü uzunluğu"),
-        parseLength(periodLength, 1, 12, "Regl süresi"),
+        parseLength(cycleLength, 15, 60, "cycleLength"),
+        parseLength(periodLength, 1, 12, "periodLength"),
       );
       setSaved(true);
     } catch (caught) {
-      setError(errorMessage(caught, "Kaydedilemedi."));
+      setError(errorText(caught, t.errors.saveFailed));
     }
   }
 
@@ -71,44 +69,40 @@ export default function SettingsScreen() {
     setLockError(null);
     try {
       if (enable && (await checkLockAvailability()) === "no-device-lock") {
-        setLockError("Önce telefonunun ayarlarından bir ekran kilidi (PIN, desen ya da parmak izi) kur.");
+        setLockError(t.settings.noDeviceLock);
         return;
       }
       // Açarken de kapatırken de doğrulanır: telefonu eline alan biri kilidi
       // sessizce kapatamasın.
-      if (await authenticate(enable ? "Uygulama kilidini aç" : "Uygulama kilidini kapat")) {
+      if (await authenticate(enable ? t.settings.lockPromptOn : t.settings.lockPromptOff, t.common.cancel)) {
         setAppLock(enable);
       }
     } catch {
-      setLockError("Kilit ayarlanamadı.");
+      setLockError(t.settings.lockFailed);
     }
   }
 
   async function changeReminders(periodDays: number | null, fertile: boolean) {
     setReminderError(null);
     const turningOn = periodDays !== null || fertile;
-    if (turningOn && !(await requestReminderPermission().catch(() => false))) {
-      setReminderError("Bildirim izni verilmedi. Telefonun ayarlarından Döngüm için bildirimlere izin ver.");
+    if (turningOn && !(await requestReminderPermission(t.notifications.channel).catch(() => false))) {
+      setReminderError(t.settings.permissionDenied);
       return;
     }
     setReminders(periodDays, fertile);
   }
 
   function confirmDeleteAll() {
-    Alert.alert(
-      "Tüm kayıtları sil",
-      "Bu telefondaki bütün döngü ve günlük kayıtların kalıcı olarak silinecek. Geri alınamaz.",
-      [
-        { text: "Vazgeç", style: "cancel" },
-        { text: "Sil", style: "destructive", onPress: () => deleteAll.mutate() },
-      ],
-    );
+    Alert.alert(t.settings.deleteAll, t.settings.deleteAllBody, [
+      { text: t.common.cancel, style: "cancel" },
+      { text: t.common.delete, style: "destructive", onPress: () => deleteAll.mutate() },
+    ]);
   }
 
   return (
     <Screen edges={[]}>
       <Card>
-        <Heading>Tema</Heading>
+        <Heading>{t.settings.theme}</Heading>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
           {APP_THEMES.map((theme) => {
             // Önizleme temanın kendi gökyüzünden küçük bir kesit: zemin,
@@ -122,7 +116,7 @@ export default function SettingsScreen() {
                 onPress={() => setTheme(theme)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                accessibilityLabel={`${THEME_LABELS_TR[theme]} teması`}
+                accessibilityLabel={t.settings.themeA11y(t.labels.theme[theme])}
                 style={{ alignItems: "center", gap: 6 }}
               >
                 <View
@@ -166,7 +160,7 @@ export default function SettingsScreen() {
                   <ShapeGlyph shape={sky.shapes[0] ?? "sparkle"} color={sky.shapeColor} size={26} />
                 </View>
                 <Text style={{ color: palette.text, fontWeight: selected ? "700" : "400" }}>
-                  {THEME_LABELS_TR[theme]}
+                  {t.labels.theme[theme]}
                 </Text>
               </Pressable>
             );
@@ -175,88 +169,89 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
-        <Heading>Varsayılan uzunluklar</Heading>
-        <Body muted>Boş bırakılırsa kayıtlarından hesaplanır.</Body>
+        <Heading>{t.settings.language}</Heading>
+        <Row>
+          {LANGUAGE_CHOICES.map((choice) => (
+            <Chip
+              key={choice}
+              label={choice === "auto" ? t.settings.languageAuto : LOCALE_NAMES[choice]}
+              selected={settings.language === choice}
+              onPress={() => setLanguage(choice)}
+            />
+          ))}
+        </Row>
+        <Body muted>{t.settings.languageAutoHint}</Body>
+      </Card>
+
+      <Card>
+        <Heading>{t.settings.lengths}</Heading>
+        <Body muted>{t.settings.lengthsHint}</Body>
         <Field
-          label="Döngü uzunluğu (gün)"
+          label={t.settings.cycleLength}
           value={cycleLength}
           onChangeText={setCycleLength}
           keyboardType="number-pad"
           placeholder="28"
         />
         <Field
-          label="Regl süresi (gün)"
+          label={t.settings.periodLength}
           value={periodLength}
           onChangeText={setPeriodLength}
           keyboardType="number-pad"
           placeholder="5"
         />
-        {saved && <Body muted>Kaydedildi.</Body>}
-        <Button label="Kaydet" variant="secondary" onPress={saveLengths} />
+        {saved && <Body muted>{t.common.saved}</Body>}
+        <Button label={t.common.save} variant="secondary" onPress={saveLengths} />
       </Card>
 
       <ErrorText message={error} />
 
       <Card>
-        <Heading>Gizlilik</Heading>
+        <Heading>{t.settings.privacy}</Heading>
         <ToggleRow
-          label="Uygulama kilidi"
+          label={t.settings.appLock}
           value={settings.appLockEnabled}
           onChange={toggleLock}
         />
-        <Body muted>
-          Açılışta ve uygulamaya geri döndüğünde telefonunun kilidi (parmak izi, yüz ya da PIN) sorulur.
-        </Body>
+        <Body muted>{t.settings.appLockHint}</Body>
         <ErrorText message={lockError} />
       </Card>
 
       <Card>
-        <Heading>Hatırlatmalar</Heading>
-        <Body muted>Adet başlangıcından önce</Body>
+        <Heading>{t.settings.reminders}</Heading>
+        <Body muted>{t.settings.beforePeriod}</Body>
         <Row>
-          {PERIOD_REMINDER_CHOICES.map((choice) => (
+          {PERIOD_REMINDER_CHOICES.map((days) => (
             <Chip
-              key={choice.label}
-              label={choice.label}
-              selected={settings.reminderPeriodDays === choice.days}
-              onPress={() => changeReminders(choice.days, settings.reminderFertile)}
+              key={String(days)}
+              label={days === null ? t.settings.off : t.common.days(days)}
+              selected={settings.reminderPeriodDays === days}
+              onPress={() => changeReminders(days, settings.reminderFertile)}
             />
           ))}
         </Row>
         <ToggleRow
-          label="Doğurgan dönem başlarken"
+          label={t.settings.fertileStart}
           value={settings.reminderFertile}
           onChange={(value) => changeReminders(settings.reminderPeriodDays, value)}
         />
-        <Body muted>
-          Bildirimler sabah 09.00&apos;da gelir. Kilit ekranında görünebilecekleri için metinleri bilerek
-          genel tutulur; adet ya da doğurganlık yazmaz.
-        </Body>
+        <Body muted>{t.settings.remindersHint}</Body>
         <ErrorText message={reminderError} />
       </Card>
 
       <Card>
-        <Heading>Verilerin</Heading>
-        <Body muted>
-          Kayıtların yalnızca bu telefonda saklanır, hiçbir sunucuya gönderilmez. Uygulamayı silersen
-          kayıtlar da silinir; telefonunun Google yedeği açıksa yeni telefona geri yüklenir.
-        </Body>
-        <ErrorText message={deleteAll.error ? errorMessage(deleteAll.error) : null} />
+        <Heading>{t.settings.data}</Heading>
+        <Body muted>{t.settings.dataHint}</Body>
+        <ErrorText message={deleteAll.error ? errorText(deleteAll.error) : null} />
         <Button
-          label="Tüm kayıtları sil"
+          label={t.settings.deleteAll}
           variant="danger"
           loading={deleteAll.isPending}
           onPress={confirmDeleteAll}
         />
       </Card>
 
-      <Body muted>{MEDICAL_DISCLAIMER}</Body>
-
-      {!isIntlTimeZoneSupported() && (
-        <Body muted>
-          {"Not: Bu cihazda saat dilimi verisi bulunamadı; “bugün” sabit UTC+3’e göre hesaplanıyor."}
-        </Body>
-      )}
+      <Body muted>{t.disclaimer}</Body>
     </Screen>
   );
 }

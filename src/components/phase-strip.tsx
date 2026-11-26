@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { PHASE_ALIAS_TR, PHASE_LABELS_TR, type CyclePhase, type PhaseRange } from "@/core";
+import type { CyclePhase, PhaseRange } from "@/core";
+import { useI18n } from "@/i18n";
 import { phaseColor, useTheme } from "@/lib/theme";
 
 /**
@@ -9,6 +10,7 @@ import { phaseColor, useTheme } from "@/lib/theme";
  */
 export function PhaseStrip({ ranges, active }: { ranges: PhaseRange[]; active: CyclePhase | null }) {
   const { palette } = useTheme();
+  const { t } = useI18n();
   const total = ranges.reduce((sum, range) => sum + range.dayCount, 0) || 1;
 
   return (
@@ -29,7 +31,7 @@ export function PhaseStrip({ ranges, active }: { ranges: PhaseRange[]; active: C
       </View>
       {ranges.map((range) => {
         const isActive = range.phase === active;
-        const alias = PHASE_ALIAS_TR[range.phase];
+        const alias = t.labels.phaseAlias[range.phase];
         return (
           <View key={range.phase} style={styles.row}>
             <View style={[styles.dot, { backgroundColor: phaseColor(palette, range.phase) }]} />
@@ -39,15 +41,15 @@ export function PhaseStrip({ ranges, active }: { ranges: PhaseRange[]; active: C
                 { color: palette.text, fontWeight: isActive ? "700" : "400" },
               ]}
             >
-              {PHASE_LABELS_TR[range.phase]}
+              {t.labels.phase[range.phase]}
               {alias ? ` (${alias})` : ""}
             </Text>
             <Text style={{ color: palette.textMuted, fontSize: 14 }}>
               {range.dayCount === 0
                 ? "—"
                 : range.startDay === range.endDay
-                  ? `${range.startDay}. gün`
-                  : `${range.startDay}–${range.endDay}. gün`}
+                  ? t.phaseStrip.day(range.startDay)
+                  : t.phaseStrip.range(range.startDay, range.endDay)}
             </Text>
           </View>
         );

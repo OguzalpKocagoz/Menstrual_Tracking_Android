@@ -5,7 +5,6 @@ import {
   daysBetween,
   daysInMonth,
   endOfMonth,
-  formatRelativeDaysTR,
   getWeekdayIndex,
   inclusiveDayCount,
   isISODate,
@@ -108,13 +107,6 @@ describe("takvim ızgarası", () => {
 });
 
 describe("biçimlendirme", () => {
-  it("göreli günleri Türkçe yazar", () => {
-    expect(formatRelativeDaysTR(0)).toBe("bugün");
-    expect(formatRelativeDaysTR(1)).toBe("yarın");
-    expect(formatRelativeDaysTR(-1)).toBe("dün");
-    expect(formatRelativeDaysTR(5)).toBe("5 gün sonra");
-    expect(formatRelativeDaysTR(-3)).toBe("3 gün önce");
-  });
 
   it("bugünü yerel saate göre üretir", () => {
     // Yerel gece yarısı sonrası UTC'de hâlâ önceki gün olsa bile

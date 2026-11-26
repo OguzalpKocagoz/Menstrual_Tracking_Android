@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, StyleSheet, useWindowDimensions, View } from "react-native";
+import { AccessibilityInfo, Animated, AppState, Easing, StyleSheet, useWindowDimensions, View } from "react-native";
 import Svg, { Circle, Defs, G, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import { useTheme, type Sky, type SkyShape } from "@/lib/theme";
 
@@ -19,11 +19,18 @@ import { useTheme, type Sky, type SkyShape } from "@/lib/theme";
  * parçacığın kendi sonsuz döngüsü var ama başlangıç noktası `Animated.modulo`
  * ile kaydırılıyor — böylece açılışta hepsi aynı anda kenardan girmez, gökyüzü
  * ilk karede dolu görünür (web'deki negatif `animation-delay`'in karşılığı).
+ *
+ * Performans: ucuz telefonlarda da akıcı kalsın diye animasyonlu düğüm sayısı
+ * bilerek düşük tutuldu (~25). Yıldızlar tek tek görünüm değil, katman başına
+ * birkaç SVG'de toplu çizilir; titreşim yıldız başına değil grup başınadır.
+ * Hale gölge filtresiyle değil yarı saydam bir daireyle çizilir. Uygulama arka
+ * plana geçince bütün döngüler durur, öne gelince kaldıkları yerden sürer.
  */
 
 // ── Yıldızlar ──────────────────────────────────────────────────────────────
 
-type Star = { left: number; top: number; size: number; opacity: number; offset: number; duration: number };
+/** Konumlar ekrana oranla (0–1); boyutlar piksel. */
+type Star = { x: number; y: number; size: number; opacity: number };
 
 type StarLayer = {
   share: number;
@@ -35,19 +42,20 @@ type StarLayer = {
   /** Hale yarıçapının boyuta oranı. 0 ise hale yok. */
   glow: number;
   /**
-   * Tek tek titreşim. Yıldız başına bir döngü demek; uzak katmanda kapalı,
-   * o yıldızlar bir kez çizilip yalnızca katman olarak kayıyor.
+   * Titreşim grubu sayısı. 0 ise katman durgun. Her grup tek bir SVG ve tek
+   * bir döngü; gruplar farklı hız ve evrede titreştiği için göz bunu tek tek
+   * yıldızların titreşimi gibi okuyor.
    */
-  twinkle: boolean;
+  twinkleGroups: number;
 };
 
 /** Telefon için web'deki 420'nin yoğunluk ayarlı karşılığı. */
 const STAR_COUNT = 300;
 
 const STAR_LAYERS: StarLayer[] = [
-  { share: 0.7, size: [0.8, 1.5], opacity: [0.14, 0.36], pan: 0.008, panDuration: 140000, glow: 0, twinkle: false },
-  { share: 0.21, size: [1.3, 2.1], opacity: [0.3, 0.62], pan: 0.02, panDuration: 95000, glow: 3, twinkle: true },
-  { share: 0.09, size: [2, 3], opacity: [0.55, 0.95], pan: 0.04, panDuration: 62000, glow: 4, twinkle: true },
+  { share: 0.7, size: [0.8, 1.5], opacity: [0.14, 0.36], pan: 0.008, panDuration: 140000, glow: 0, twinkleGroups: 0 },
+  { share: 0.21, size: [1.3, 2.1], opacity: [0.3, 0.62], pan: 0.02, panDuration: 95000, glow: 3, twinkleGroups: 3 },
+  { share: 0.09, size: [2, 3], opacity: [0.55, 0.95], pan: 0.04, panDuration: 62000, glow: 4, twinkleGroups: 3 },
 ];
 
 function random([min, max]: [number, number]) {
@@ -60,93 +68,155 @@ function lerp(min: number, max: number, t: number) {
 
 function createStars(count: number, layer: StarLayer): Star[] {
   return Array.from({ length: count }, () => ({
-    left: Math.random() * 100,
-    top: Math.random() * 100,
+    x: Math.random(),
+    y: Math.random(),
     size: random(layer.size),
     opacity: random(layer.opacity),
-    offset: Math.random(),
-    duration: 2600 + Math.random() * 4200,
   }));
 }
 
-/** 0→1 arasında sonsuz dönen, başlangıcı `offset` kadar kaydırılmış ilerleme. */
+/** Katmanın yıldızlarını titreşim gruplarına böler; her grubun kendi hızı ve evresi var. */
+function createStarGroups(layer: StarLayer) {
+  const stars = createStars(Math.max(3, Math.round(STAR_COUNT * layer.share)), layer);
+  const count = Math.max(1, layer.twinkleGroups);
+  return Array.from({ length: count }, (_, group) => ({
+    stars: stars.filter((_, index) => index % count === group),
+    duration: 2600 + Math.random() * 4200,
+    offset: Math.random(),
+  }));
+}
+
+/**
+ * 0→1 arasında sonsuz dönen, başlangıcı `offset` kadar kaydırılmış ilerleme.
+ *
+ * `enabled` false olunca döngü durur; yeniden açılınca kaldığı yerden devam
+ * eder (ilk tur kalan süre kadar, sonra tam turlar). Böylece arka plandan
+ * dönüşte şekiller yerinden sıçramaz.
+ */
 function useLoop(duration: number, offset: number, enabled: boolean) {
   const progress = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     if (!enabled) return;
-    const loop = Animated.loop(
+    let cancelled = false;
+    let running: Animated.CompositeAnimation | null = null;
+    const timing = (from: number) =>
       Animated.timing(progress, {
         toValue: 1,
-        duration,
+        duration: Math.max(1, duration * (1 - from)),
         easing: Easing.linear,
         useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
+      });
+
+    progress.stopAnimation((value) => {
+      if (cancelled) return;
+      running = timing(value);
+      running.start(({ finished }) => {
+        if (!finished || cancelled) return;
+        progress.setValue(0);
+        running = Animated.loop(timing(0));
+        running.start();
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      running?.stop();
+    };
   }, [progress, duration, enabled]);
 
   return useMemo(() => Animated.modulo(Animated.add(progress, offset), 1), [progress, offset]);
 }
 
-const TwinklingStar = memo(function TwinklingStar({
-  star,
+/** Bir grup yıldızı tek SVG'de çizer; hale yıldızın altında soluk bir daire. */
+function StarSvg({
+  stars,
+  width,
+  height,
   halo,
   glow,
 }: {
-  star: Star;
+  stars: Star[];
+  width: number;
+  height: number;
   halo: string;
   glow: number;
 }) {
-  const phase = useLoop(star.duration, star.offset, true);
-  const opacity = phase.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [star.opacity * 0.35, star.opacity, star.opacity * 0.35],
-  });
-  const scale = phase.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.85, 1, 0.85] });
+  return (
+    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+      {glow > 0 &&
+        stars.map((star, index) => (
+          <Circle
+            key={`h${index}`}
+            cx={star.x * width}
+            cy={star.y * height}
+            r={(star.size * glow) / 2}
+            fill={halo}
+            opacity={star.opacity * 0.22}
+          />
+        ))}
+      {stars.map((star, index) => (
+        <Circle
+          key={index}
+          cx={star.x * width}
+          cy={star.y * height}
+          r={star.size / 2}
+          fill="#ffffff"
+          opacity={star.opacity}
+        />
+      ))}
+    </Svg>
+  );
+}
 
+const TwinkleGroup = memo(function TwinkleGroup({
+  stars,
+  width,
+  height,
+  halo,
+  glow,
+  duration,
+  offset,
+  animated,
+}: {
+  stars: Star[];
+  width: number;
+  height: number;
+  halo: string;
+  glow: number;
+  duration: number;
+  offset: number;
+  animated: boolean;
+}) {
+  const phase = useLoop(duration, offset, animated);
+  const opacity = phase.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.4, 1, 0.4] });
   return (
     <Animated.View
-      style={[
-        starStyle(star),
-        {
-          opacity,
-          transform: [{ scale }],
-          boxShadow: glow ? `0 0 ${star.size * glow}px ${halo}` : undefined,
-        },
-      ]}
-    />
+      style={[StyleSheet.absoluteFill, { opacity: animated ? opacity : 1 }]}
+      renderToHardwareTextureAndroid
+    >
+      <StarSvg stars={stars} width={width} height={height} halo={halo} glow={glow} />
+    </Animated.View>
   );
 });
-
-function starStyle(star: Star) {
-  return {
-    position: "absolute" as const,
-    left: `${star.left}%` as const,
-    top: `${star.top}%` as const,
-    width: star.size,
-    height: star.size,
-    borderRadius: star.size,
-    backgroundColor: "#ffffff",
-  };
-}
 
 const StarLayerView = memo(function StarLayerView({
   layer,
   width,
+  height,
   halo,
   animated,
 }: {
   layer: StarLayer;
   width: number;
+  height: number;
   halo: string;
   animated: boolean;
 }) {
-  const stars = useMemo(
-    () => createStars(Math.max(3, Math.round(STAR_COUNT * layer.share)), layer),
-    [layer],
-  );
+  // Yıldızlar ve gruplar bir kez üretilir; ekran döndürülünce yalnızca
+  // konumlar yeni boyuta ölçeklenir.
+  const groups = useMemo(() => createStarGroups(layer), [layer]);
+
   const phase = useLoop(layer.panDuration, 0, animated);
   const shift = width * layer.pan;
   // Git-gel kayma: yarı yolda en uçta, döngü sonunda başa döner (web'deki `alternate`).
@@ -154,13 +224,26 @@ const StarLayerView = memo(function StarLayerView({
   const translateY = phase.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, shift * 0.6, 0] });
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX }, { translateY }] }]}>
-      {stars.map((star, index) =>
-        animated && layer.twinkle ? (
-          <TwinklingStar key={index} star={star} halo={halo} glow={layer.glow} />
-        ) : (
-          <View key={index} style={[starStyle(star), { opacity: star.opacity }]} />
-        ),
+    <Animated.View
+      style={[StyleSheet.absoluteFill, { transform: [{ translateX }, { translateY }] }]}
+      renderToHardwareTextureAndroid
+    >
+      {layer.twinkleGroups === 0 ? (
+        <StarSvg stars={groups[0]?.stars ?? []} width={width} height={height} halo={halo} glow={layer.glow} />
+      ) : (
+        groups.map((group, index) => (
+          <TwinkleGroup
+            key={index}
+            stars={group.stars}
+            width={width}
+            height={height}
+            halo={halo}
+            glow={layer.glow}
+            duration={group.duration}
+            offset={group.offset}
+            animated={animated}
+          />
+        ))
       )}
     </Animated.View>
   );
@@ -192,7 +275,7 @@ type Drifter = {
  * seçiliyor.
  */
 const DRIFTER = {
-  count: 16,
+  count: 14,
   size: [12, 30] as [number, number],
   duration: [14000, 26000] as [number, number],
   opacity: [0.25, 0.72] as [number, number],
@@ -223,14 +306,16 @@ const DriftingShape = memo(function DriftingShape({
   width,
   height,
   id,
+  animated,
 }: {
   drifter: Drifter;
   color: string;
   width: number;
   height: number;
   id: string;
+  animated: boolean;
 }) {
-  const phase = useLoop(drifter.duration, drifter.offset, true);
+  const phase = useLoop(drifter.duration, drifter.offset, animated);
   const tailed = TAILED.has(drifter.shape);
   const tail = tailed ? drifter.size * 4 : 0;
   const itemWidth = tail + drifter.size;
@@ -253,6 +338,9 @@ const DriftingShape = memo(function DriftingShape({
 
   return (
     <Animated.View
+      // Şekil bir kez rasterleştirilip ekran kartında taşınır; her karede
+      // SVG yeniden çizilmez.
+      renderToHardwareTextureAndroid
       style={{
         position: "absolute",
         left: 0,
@@ -362,7 +450,17 @@ function renderShape(shape: SkyShape, color: string) {
   }
 }
 
-const ShapeField = memo(function ShapeField({ sky, width, height }: { sky: Sky; width: number; height: number }) {
+const ShapeField = memo(function ShapeField({
+  sky,
+  width,
+  height,
+  animated,
+}: {
+  sky: Sky;
+  width: number;
+  height: number;
+  animated: boolean;
+}) {
   // Tema değişince şekiller yeniden dağıtılır; ekran döndürülünce değil.
   const drifters = useMemo(() => createDrifters(sky.shapes), [sky.shapes]);
   return (
@@ -375,6 +473,7 @@ const ShapeField = memo(function ShapeField({ sky, width, height }: { sky: Sky; 
           color={sky.shapeColor}
           width={width}
           height={height}
+          animated={animated}
         />
       ))}
     </>
@@ -400,10 +499,22 @@ function useReduceMotion() {
   return reduce;
 }
 
+/** Uygulama ön planda mı. Arka planda animasyon pil yakmasın. */
+function useAppActive() {
+  const [active, setActive] = useState(AppState.currentState === "active");
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => setActive(state === "active"));
+    return () => subscription.remove();
+  }, []);
+  return active;
+}
+
 export function NightSky() {
   const { palette, sky } = useTheme();
   const { width, height } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
+  const active = useAppActive();
+  const animated = !reduceMotion && active;
 
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: palette.bg }]} importantForAccessibility="no-hide-descendants">
@@ -424,10 +535,10 @@ export function NightSky() {
       </Svg>
 
       {STAR_LAYERS.map((layer, index) => (
-        <StarLayerView key={index} layer={layer} width={width} halo={sky.starHalo} animated={!reduceMotion} />
+        <StarLayerView key={index} layer={layer} width={width} height={height} halo={sky.starHalo} animated={animated} />
       ))}
 
-      {!reduceMotion && <ShapeField sky={sky} width={width} height={height} />}
+      {!reduceMotion && <ShapeField sky={sky} width={width} height={height} animated={animated} />}
 
       {/* Kenar karartması: merkez açık, kenarlar koyu — gökyüzü düz bir duvar
           değil, içine doğru derinleşen bir boşluk gibi dursun. */}

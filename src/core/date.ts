@@ -16,13 +16,6 @@ export type ISODate = string;
 const MS_PER_DAY = 86_400_000;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-export const WEEKDAY_LABELS_TR = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] as const;
-
-export const MONTH_LABELS_TR = [
-  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
-] as const;
-
 /**
  * "2026-02-30" gibi takvimde var olmayan tarihler de reddedilir.
  *
@@ -144,25 +137,4 @@ export function buildMonthGrid(year: number, month: number): ISODate[][] {
   return weeks;
 }
 
-export function formatDateTR(date: ISODate): string {
-  const monthLabel = MONTH_LABELS_TR[getMonth(date) - 1] ?? "";
-  return `${getDayOfMonth(date)} ${monthLabel} ${getYear(date)}`;
-}
-
-export function formatShortDateTR(date: ISODate): string {
-  const monthLabel = MONTH_LABELS_TR[getMonth(date) - 1] ?? "";
-  return `${getDayOfMonth(date)} ${monthLabel}`;
-}
-
-export function formatMonthTR(year: number, month: number): string {
-  return `${MONTH_LABELS_TR[month - 1] ?? ""} ${year}`;
-}
-
 /** "3 gün sonra", "dün", "bugün" gibi göreli ifadeler. */
-export function formatRelativeDaysTR(days: number): string {
-  if (days === 0) return "bugün";
-  if (days === 1) return "yarın";
-  if (days === -1) return "dün";
-  if (days > 1) return `${days} gün sonra`;
-  return `${Math.abs(days)} gün önce`;
-}

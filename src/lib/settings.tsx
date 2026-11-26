@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { DEFAULT_THEME, isAppTheme, type AppTheme } from "@/core";
+import { isLanguagePreference, type LanguagePreference } from "@/i18n/format";
 import { readSettingsSync, writeSettingSync } from "./db";
 
 /**
@@ -11,6 +12,8 @@ import { readSettingsSync, writeSettingSync } from "./db";
  */
 export interface Settings {
   theme: AppTheme;
+  /** "auto" telefonun dilini izler. */
+  language: LanguagePreference;
   defaultCycleLength: number | null;
   defaultPeriodLength: number | null;
   /** Kullanıcı tıbbi uyarıyı onayladı mı. */
@@ -25,6 +28,7 @@ export interface Settings {
 
 const KEYS = {
   theme: "theme",
+  language: "language",
   defaultCycleLength: "defaultCycleLength",
   defaultPeriodLength: "defaultPeriodLength",
   disclaimerAcceptedAt: "disclaimerAcceptedAt",
@@ -42,8 +46,10 @@ function readNumber(value: string | undefined): number | null {
 function loadSettings(): Settings {
   const raw = readSettingsSync();
   const theme = raw[KEYS.theme];
+  const language = raw[KEYS.language];
   return {
     theme: isAppTheme(theme) ? theme : DEFAULT_THEME,
+    language: isLanguagePreference(language) ? language : "auto",
     defaultCycleLength: readNumber(raw[KEYS.defaultCycleLength]),
     defaultPeriodLength: readNumber(raw[KEYS.defaultPeriodLength]),
     disclaimerAccepted: Boolean(raw[KEYS.disclaimerAcceptedAt]),
@@ -56,6 +62,7 @@ function loadSettings(): Settings {
 interface SettingsValue {
   settings: Settings;
   setTheme: (theme: AppTheme) => void;
+  setLanguage: (language: LanguagePreference) => void;
   setDefaultLengths: (cycle: number | null, period: number | null) => void;
   acceptDisclaimer: () => void;
   setAppLock: (enabled: boolean) => void;
@@ -70,6 +77,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((theme: AppTheme) => {
     writeSettingSync(KEYS.theme, theme);
     setSettings((current) => ({ ...current, theme }));
+  }, []);
+
+  const setLanguage = useCallback((language: LanguagePreference) => {
+    writeSettingSync(KEYS.language, language === "auto" ? null : language);
+    setSettings((current) => ({ ...current, language }));
   }, []);
 
   const setDefaultLengths = useCallback((cycle: number | null, period: number | null) => {
@@ -97,8 +109,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ settings, setTheme, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders }),
-    [settings, setTheme, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders],
+    () => ({ settings, setTheme, setLanguage, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders }),
+    [settings, setTheme, setLanguage, setDefaultLengths, acceptDisclaimer, setAppLock, setReminders],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

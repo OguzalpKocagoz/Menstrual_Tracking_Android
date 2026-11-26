@@ -15,27 +15,35 @@ const CHANNEL_ID = "hatirlatmalar";
 /** Hatırlatmaların gideceği saat (yerel). */
 const REMINDER_HOUR = 9;
 
-const TEXT: Record<ReminderKind, string> = {
-  period: "Takviminde yaklaşan bir gün var.",
-  fertile: "Takviminde bugün yeni bir dönem başlıyor.",
-};
+/** Bildirim metinleri seçili dilde, çağıran taraftan gelir (bkz. `notifications` sözlüğü). */
+export interface ReminderTexts {
+  title: string;
+  channel: string;
+  body: Record<ReminderKind, string>;
+}
 
-let configured = false;
+let handlerSet = false;
 
-async function configure(): Promise<void> {
-  if (configured) return;
-  configured = true;
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-    }),
-  });
+/**
+ * Bildirim işleyicisi bir kez kurulur. Kanal her seferinde yeniden kurulur:
+ * Android var olan kanalın yalnızca adını günceller, böylece dil değişince
+ * sistem ayarlarındaki kanal adı da değişir.
+ */
+async function configure(channelName: string): Promise<void> {
+  if (!handlerSet) {
+    handlerSet = true;
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+  }
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: "Hatırlatmalar",
+      name: channelName,
       importance: AndroidImportance.DEFAULT,
       lockscreenVisibility: AndroidNotificationVisibility.PRIVATE,
     });
@@ -43,8 +51,8 @@ async function configure(): Promise<void> {
 }
 
 /** İzin ister; Android 13+ sistem penceresi çıkar. Verildiyse true. */
-export async function requestReminderPermission(): Promise<boolean> {
-  await configure();
+export async function requestReminderPermission(channelName: string): Promise<boolean> {
+  await configure(channelName);
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
@@ -61,8 +69,8 @@ function triggerDate(date: string): Date {
  * ayar her değiştiğinde çağrılır; tek kaynak plan olduğu için eski ve yeni
  * hatırlatmalar karışmaz.
  */
-export async function syncReminders(plan: readonly PlannedReminder[]): Promise<void> {
-  await configure();
+export async function syncReminders(plan: readonly PlannedReminder[], texts: ReminderTexts): Promise<void> {
+  await configure(texts.channel);
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (plan.length === 0) return;
   if (!(await Notifications.getPermissionsAsync()).granted) return;
@@ -72,7 +80,7 @@ export async function syncReminders(plan: readonly PlannedReminder[]): Promise<v
     const date = triggerDate(item.date);
     if (date.getTime() <= now) continue;
     await Notifications.scheduleNotificationAsync({
-      content: { title: "Döngüm", body: TEXT[item.kind] },
+      content: { title: texts.title, body: texts.body[item.kind] },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: CHANNEL_ID },
     });
   }

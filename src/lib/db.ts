@@ -123,7 +123,7 @@ async function allCycles(): Promise<Cycle[]> {
 
 async function findCycle(id: string): Promise<Cycle> {
   const row = await db.getFirstAsync<CycleRow>("SELECT * FROM cycles WHERE id = ?", id);
-  if (!row) throw new UserError("Döngü bulunamadı.");
+  if (!row) throw new UserError("cycleNotFound");
   return toCycle(row);
 }
 
@@ -176,7 +176,7 @@ export async function endPeriod(date: ISODate, cycleId?: string): Promise<Cycle>
     cycle = await findCycle(cycleId);
   } else {
     const latest = await db.getFirstAsync<CycleRow>("SELECT * FROM cycles ORDER BY start_date DESC LIMIT 1");
-    if (!latest) throw new UserError("Bitirilecek bir döngü bulunamadı.");
+    if (!latest) throw new UserError("noCycleToEnd");
     cycle = toCycle(latest);
   }
 
@@ -193,7 +193,7 @@ export async function clearPeriodEnd(cycleId: string): Promise<void> {
 
 export async function deleteCycle(cycleId: string): Promise<void> {
   const result = await db.runAsync("DELETE FROM cycles WHERE id = ?", cycleId);
-  if (result.changes === 0) throw new UserError("Döngü bulunamadı.");
+  if (result.changes === 0) throw new UserError("cycleNotFound");
 }
 
 export async function getDailyLog(date: ISODate): Promise<DailyLog | null> {

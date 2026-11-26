@@ -3,14 +3,10 @@ import { useMemo, useState } from "react";
 import { Alert } from "react-native";
 import {
   FLOW_INTENSITIES,
-  FLOW_LABELS_TR,
-  formatDateTR,
   getCycleStartingOn,
   getPeriodCycleForDate,
   isISODate,
-  MOOD_LABELS_TR,
   MOODS,
-  SYMPTOM_LABELS_TR,
   SYMPTOMS,
   type DailyLog,
   type FlowIntensity,
@@ -18,7 +14,7 @@ import {
   type Symptom,
 } from "@/core";
 import { Body, Button, Card, Chip, ErrorText, Field, Heading, Loading, Row, Screen } from "@/components/ui";
-import { errorMessage } from "@/lib/rules";
+import { useI18n } from "@/i18n";
 import {
   useCycleData,
   useDailyLog,
@@ -30,7 +26,7 @@ import {
 } from "@/lib/data";
 import { useTheme } from "@/lib/theme";
 
-/** "36,6" de yazılabilsin; Türkçe klavyede ondalık ayıracı virgüldür. */
+/** "36,6" de "36.6" da yazılabilsin; ondalık ayıracı klavyenin diline göre değişir. */
 function parseTemperature(value: string): number | null | "invalid" {
   const trimmed = value.trim().replace(",", ".");
   if (!trimmed) return null;
@@ -43,6 +39,7 @@ export default function DayScreen() {
   const params = useLocalSearchParams<{ date: string }>();
   const date = typeof params.date === "string" && isISODate(params.date) ? params.date : null;
   const router = useRouter();
+  const { t, format, errorText } = useI18n();
   const today = useToday();
 
   const cycleData = useCycleData();
@@ -62,7 +59,7 @@ export default function DayScreen() {
   if (!date) {
     return (
       <Screen edges={[]}>
-        <ErrorText message="Geçersiz tarih." />
+        <ErrorText message={t.errors.invalidDate} />
       </Screen>
     );
   }
@@ -71,9 +68,9 @@ export default function DayScreen() {
   const isFuture = date > today;
 
   function confirmDeleteCycle(id: string) {
-    Alert.alert("Döngüyü sil", "Bu güne girilen adet başlangıcı silinsin mi?", [
-      { text: "Vazgeç", style: "cancel" },
-      { text: "Sil", style: "destructive", onPress: () => removeCycle.mutate(id) },
+    Alert.alert(t.day.deleteTitle, t.day.deleteBody, [
+      { text: t.common.cancel, style: "cancel" },
+      { text: t.common.delete, style: "destructive", onPress: () => removeCycle.mutate(id) },
     ]);
   }
 
@@ -83,19 +80,19 @@ export default function DayScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: formatDateTR(date) }} />
+      <Stack.Screen options={{ title: format.date(date) }} />
       <Screen edges={[]}>
         <Card>
-          <Heading>Adet</Heading>
+          <Heading>{t.day.period}</Heading>
           {isFuture ? (
-            <Body muted>Gelecek bir güne adet başlangıcı girilemez.</Body>
+            <Body muted>{t.day.futureNote}</Body>
           ) : periodCycle ? (
             periodCycle.periodEndDate === date ? (
-              <Body muted>Kanama bu gün bitti olarak işaretli.</Body>
+              <Body muted>{t.day.endedThisDay}</Body>
             ) : (
               <Button
                 variant="secondary"
-                label="Bitişi bu güne al"
+                label={t.day.endHere}
                 loading={end.isPending}
                 onPress={() => end.mutate({ date, cycleId: periodCycle.id })}
               />
@@ -103,7 +100,7 @@ export default function DayScreen() {
           ) : (
             <Button
               variant="secondary"
-              label="Adetim bu gün başladı"
+              label={t.day.startHere}
               loading={start.isPending}
               onPress={() => start.mutate(date)}
             />
@@ -111,11 +108,11 @@ export default function DayScreen() {
           {startingCycle && (
             <Button
               variant="link"
-              label="Bu güne girilen başlangıcı sil"
+              label={t.day.deleteStart}
               onPress={() => confirmDeleteCycle(startingCycle.id)}
             />
           )}
-          <ErrorText message={actionError ? errorMessage(actionError) : null} />
+          <ErrorText message={actionError ? errorText(actionError) : null} />
         </Card>
 
         <LogForm key={date} date={date} initial={logQuery.data ?? null} onSaved={() => router.back()} />
@@ -138,6 +135,7 @@ function LogForm({
   onSaved: () => void;
 }) {
   const { palette } = useTheme();
+  const { t, errorText } = useI18n();
   const save = useSaveDailyLog(date);
   const [flow, setFlow] = useState<FlowIntensity | null>(initial?.flow ?? null);
   const [mood, setMood] = useState<Mood | null>(initial?.mood ?? null);
@@ -152,7 +150,7 @@ function LogForm({
     setFormError(null);
     const temperatureC = parseTemperature(temperature);
     if (temperatureC === "invalid") {
-      setFormError("Sıcaklık 34–43 °C arasında olmalı.");
+      setFormError(t.errors.temperatureRange);
       return;
     }
     // Tamamen boş kaydedilen gün silinir.
@@ -167,12 +165,12 @@ function LogForm({
 
   return (
         <Card>
-          <Heading>Kanama yoğunluğu</Heading>
+          <Heading>{t.day.flow}</Heading>
           <Row>
             {FLOW_INTENSITIES.map((value) => (
               <Chip
                 key={value}
-                label={FLOW_LABELS_TR[value]}
+                label={t.labels.flow[value]}
                 selected={flow === value}
                 color={palette.period}
                 onPress={() => setFlow(flow === value ? null : value)}
@@ -180,24 +178,24 @@ function LogForm({
             ))}
           </Row>
 
-          <Heading>Ruh hâli</Heading>
+          <Heading>{t.day.mood}</Heading>
           <Row>
             {MOODS.map((value) => (
               <Chip
                 key={value}
-                label={MOOD_LABELS_TR[value]}
+                label={t.labels.mood[value]}
                 selected={mood === value}
                 onPress={() => setMood(mood === value ? null : value)}
               />
             ))}
           </Row>
 
-          <Heading>Belirtiler</Heading>
+          <Heading>{t.day.symptoms}</Heading>
           <Row>
             {SYMPTOMS.map((value) => (
               <Chip
                 key={value}
-                label={SYMPTOM_LABELS_TR[value]}
+                label={t.labels.symptom[value]}
                 selected={symptoms.includes(value)}
                 onPress={() => toggleSymptom(value)}
               />
@@ -205,22 +203,22 @@ function LogForm({
           </Row>
 
           <Field
-            label="Bazal sıcaklık (°C)"
+            label={t.day.temperature}
             value={temperature}
             onChangeText={setTemperature}
             keyboardType="decimal-pad"
-            placeholder="36,6"
+            placeholder={t.day.temperaturePlaceholder}
           />
           <Field
-            label="Not"
+            label={t.day.note}
             value={notes}
             onChangeText={setNotes}
             multiline
             maxLength={2000}
             style={{ minHeight: 90, textAlignVertical: "top", paddingTop: 10 }}
           />
-          <ErrorText message={formError ?? (save.error ? errorMessage(save.error) : null)} />
-          <Button label="Kaydet" onPress={submit} loading={save.isPending} />
+          <ErrorText message={formError ?? (save.error ? errorText(save.error) : null)} />
+          <Button label={t.common.save} onPress={submit} loading={save.isPending} />
         </Card>
   );
 }

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import type { CyclePhase } from "@/core";
+import { useI18n } from "@/i18n";
 import { phaseColor, useTheme } from "@/lib/theme";
 
 const SIZE = 230;
@@ -26,6 +27,7 @@ export function CycleRing({
   subtitle: string | null;
 }) {
   const { palette } = useTheme();
+  const { t } = useI18n();
   const color = phaseColor(palette, phase);
   // Döngü tahminden uzun sürerse halka dolu kalır, taşmaz.
   const progress = cycleDay ? Math.min(1, cycleDay / Math.max(1, cycleLength)) : 0;
@@ -56,7 +58,7 @@ export function CycleRing({
       </Svg>
       <View style={styles.center}>
         {cycleDay !== null && (
-          <Text style={[styles.day, { color: palette.textMuted }]}>{cycleDay}. gün</Text>
+          <Text style={[styles.day, { color: palette.textMuted }]}>{t.ring.cycleDay(cycleDay)}</Text>
         )}
         <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
         {subtitle && <Text style={[styles.subtitle, { color: color }]}>{subtitle}</Text>}

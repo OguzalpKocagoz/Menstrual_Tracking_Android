@@ -21,7 +21,7 @@ export function useCycleData() {
 }
 
 /**
- * Bugünün tarihi (Europe/Istanbul). Uygulama arka plandan dönünce ve her
+ * Bugünün tarihi (telefonun saat dilimine göre). Uygulama arka plandan dönünce ve her
  * dakika yeniden hesaplanır — gece yarısı açık kalan ekran dünü göstermesin.
  */
 export function useToday(): string {

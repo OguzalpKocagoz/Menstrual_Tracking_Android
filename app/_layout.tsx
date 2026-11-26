@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NightSky } from "@/components/night-sky";
+import { I18nProvider, useI18n } from "@/i18n";
 import { AppLockGate } from "@/lib/app-lock";
 import { ReminderSync } from "@/lib/reminder-sync";
 import { SettingsProvider, useSettings } from "@/lib/settings";
@@ -18,6 +19,7 @@ import { ThemeProvider, useTheme } from "@/lib/theme";
  */
 function Navigator() {
   const { palette } = useTheme();
+  const { t } = useI18n();
 
   // Gezinme kitaplığının kendi zemin rengi kapları boyar; şeffaf yapılmazsa
   // gökyüzü ekranların arkasında kalır.
@@ -55,8 +57,8 @@ function Navigator() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="hosgeldin" options={{ headerShown: false }} />
-        <Stack.Screen name="gun/[date]" options={{ title: "Gün" }} />
-        <Stack.Screen name="ayarlar" options={{ title: "Ayarlar" }} />
+        <Stack.Screen name="gun/[date]" options={{ title: t.tabs.day }} />
+        <Stack.Screen name="ayarlar" options={{ title: t.tabs.settings }} />
       </Stack>
     </NavigationThemeProvider>
   );
@@ -65,6 +67,7 @@ function Navigator() {
 function ThemedApp() {
   const { settings } = useSettings();
   return (
+    <I18nProvider preference={settings.language}>
     <ThemeProvider theme={settings.theme}>
       <View style={{ flex: 1 }}>
         <NightSky />
@@ -74,6 +77,7 @@ function ThemedApp() {
       </View>
       {settings.disclaimerAccepted && <ReminderSync />}
     </ThemeProvider>
+    </I18nProvider>
   );
 }
 

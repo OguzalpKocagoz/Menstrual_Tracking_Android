@@ -35,9 +35,17 @@
       "expo-sqlite",
       [
         "expo-local-authentication",
-        { "faceIDPermission": "Kayıtlarını korumak için uygulama kilidinde Face ID kullanılır." }
+        {
+          "faceIDPermission": "Kayıtlarını korumak için uygulama kilidinde Face ID kullanılır."
+        }
       ],
-      ["expo-notifications", { "color": "#d03765" }]
+      [
+        "expo-notifications",
+        {
+          "color": "#d03765"
+        }
+      ],
+      ["expo-localization", { "supportedLocales": ["tr", "en"] }]
     ]
   }
 }

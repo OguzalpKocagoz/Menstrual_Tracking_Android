@@ -2,6 +2,7 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState, StyleSheet, View } from "react-native";
 import { Body, Button, Title } from "@/components/ui";
+import { useI18n } from "@/i18n";
 import { useSettings } from "./settings";
 import { useTheme } from "./theme";
 
@@ -25,10 +26,10 @@ export async function checkLockAvailability(): Promise<LockAvailability> {
   return level === LocalAuthentication.SecurityLevel.NONE ? "no-device-lock" : "ready";
 }
 
-export async function authenticate(promptMessage: string): Promise<boolean> {
+export async function authenticate(promptMessage: string, cancelLabel: string): Promise<boolean> {
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage,
-    cancelLabel: "Vazgeç",
+    cancelLabel,
     // PIN/desen yedeği açık: parmak izi okunmazsa kullanıcı dışarıda kalmasın.
     disableDeviceFallback: false,
   });
@@ -38,6 +39,7 @@ export async function authenticate(promptMessage: string): Promise<boolean> {
 export function AppLockGate({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const { palette } = useTheme();
+  const { t } = useI18n();
   const enabled = settings.appLockEnabled;
   const [locked, setLocked] = useState(enabled);
   const backgroundAt = useRef<number | null>(null);
@@ -47,12 +49,12 @@ export function AppLockGate({ children }: { children: ReactNode }) {
     if (authenticating.current) return;
     authenticating.current = true;
     try {
-      if (await authenticate("Döngüm'ü aç")) setLocked(false);
+      if (await authenticate(t.lock.prompt, t.common.cancel)) setLocked(false);
     } finally {
       authenticating.current = false;
       backgroundAt.current = null;
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -79,11 +81,11 @@ export function AppLockGate({ children }: { children: ReactNode }) {
       {enabled && locked && (
         // Üstte örtü: altındaki ekranlar kapanmaz, kilit açılınca kaldığı yerden devam edilir.
         <View style={[StyleSheet.absoluteFill, styles.cover, { backgroundColor: palette.bg }]}>
-          <Title>Döngüm</Title>
+          <Title>{t.common.appName}</Title>
           <Body muted center>
-            Kayıtların kilitli.
+            {t.lock.locked}
           </Body>
-          <Button label="Kilidi aç" onPress={unlock} />
+          <Button label={t.lock.unlock} onPress={unlock} />
         </View>
       )}
     </View>

@@ -3,12 +3,11 @@ import { Alert, Pressable, Text, View } from "react-native";
 import {
   computeCycleStats,
   daysBetween,
-  formatDateTR,
   inclusiveDayCount,
   sortCycles,
 } from "@/core";
 import { Body, Card, ErrorText, Heading, Loading, Screen } from "@/components/ui";
-import { errorMessage } from "@/lib/rules";
+import { useI18n } from "@/i18n";
 import { useCycleData, useDeleteCycle } from "@/lib/data";
 import { useTheme } from "@/lib/theme";
 
@@ -24,6 +23,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export default function StatsScreen() {
   const { palette } = useTheme();
+  const { t, format, errorText } = useI18n();
   const { data, isLoading, isRefetching, refetch } = useCycleData();
   const remove = useDeleteCycle();
 
@@ -44,57 +44,56 @@ export default function StatsScreen() {
   if (isLoading || !view) return <Loading />;
   const { stats, history } = view;
   const mark = stats.usingDefaults ? " *" : "";
+  const days = (n: number) => t.common.days(n);
 
   function confirmDelete(id: string, label: string) {
-    Alert.alert("Döngüyü sil", `${label} başlangıçlı döngü silinsin mi? Bu geri alınamaz.`, [
-      { text: "Vazgeç", style: "cancel" },
-      { text: "Sil", style: "destructive", onPress: () => remove.mutate(id) },
+    Alert.alert(t.stats.deleteTitle, t.stats.deleteBody(label), [
+      { text: t.common.cancel, style: "cancel" },
+      { text: t.common.delete, style: "destructive", onPress: () => remove.mutate(id) },
     ]);
   }
 
   return (
     <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]}>
       <Card>
-        <Heading>Döngü</Heading>
-        <Stat label="Ortalama döngü" value={`${stats.averageCycleLength} gün${mark}`} />
-        <Stat label="Medyan döngü" value={`${stats.medianCycleLength} gün${mark}`} />
-        <Stat label="En kısa" value={stats.shortestCycleLength ? `${stats.shortestCycleLength} gün` : "—"} />
-        <Stat label="En uzun" value={stats.longestCycleLength ? `${stats.longestCycleLength} gün` : "—"} />
-        <Stat label="Ortalama regl süresi" value={`${stats.averagePeriodLength} gün`} />
+        <Heading>{t.stats.cycle}</Heading>
+        <Stat label={t.stats.average} value={`${days(stats.averageCycleLength)}${mark}`} />
+        <Stat label={t.stats.median} value={`${days(stats.medianCycleLength)}${mark}`} />
+        <Stat label={t.stats.shortest} value={stats.shortestCycleLength ? days(stats.shortestCycleLength) : "—"} />
+        <Stat label={t.stats.longest} value={stats.longestCycleLength ? days(stats.longestCycleLength) : "—"} />
+        <Stat label={t.stats.averagePeriod} value={days(stats.averagePeriodLength)} />
         <Stat
-          label="Düzenlilik"
+          label={t.stats.regularity}
           value={
             stats.observedCycleCount < 2
-              ? "Henüz belli değil"
+              ? t.stats.notYet
               : stats.isRegular
-                ? `Düzenli (±${stats.cycleLengthVariation} gün)`
-                : `Değişken (±${stats.cycleLengthVariation} gün)`
+                ? t.stats.regular(stats.cycleLengthVariation)
+                : t.stats.variable(stats.cycleLengthVariation)
           }
         />
-        <Stat label="Hesaba giren döngü" value={String(stats.observedCycleCount)} />
-        {stats.usingDefaults && (
-          <Body muted>* Tahmini değer: en az iki adet başlangıcı kaydedince gerçek değerler görünür.</Body>
-        )}
+        <Stat label={t.stats.counted} value={String(stats.observedCycleCount)} />
+        {stats.usingDefaults && <Body muted>{t.stats.estimateNote}</Body>}
       </Card>
 
       <Card>
-        <Heading>Döngü geçmişi</Heading>
-        <ErrorText message={remove.error ? errorMessage(remove.error) : null} />
-        {history.length === 0 && <Body muted>Henüz döngü kaydı yok.</Body>}
+        <Heading>{t.stats.history}</Heading>
+        <ErrorText message={remove.error ? errorText(remove.error) : null} />
+        {history.length === 0 && <Body muted>{t.stats.noHistory}</Body>}
         {history.map(({ cycle, length, periodLength }) => (
           <Pressable
             key={cycle.id}
-            onLongPress={() => confirmDelete(cycle.id, formatDateTR(cycle.startDate))}
+            onLongPress={() => confirmDelete(cycle.id, format.date(cycle.startDate))}
             style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: palette.border }}
           >
-            <Text style={{ color: palette.text, fontWeight: "600" }}>{formatDateTR(cycle.startDate)}</Text>
+            <Text style={{ color: palette.text, fontWeight: "600" }}>{format.date(cycle.startDate)}</Text>
             <Text style={{ color: palette.textMuted }}>
-              {length !== null ? `${length} günlük döngü` : "Devam ediyor"} ·{" "}
-              {periodLength !== null ? `${periodLength} gün kanama` : "bitiş işaretlenmedi"}
+              {length !== null ? t.stats.cycleLength(length) : t.stats.ongoing} ·{" "}
+              {periodLength !== null ? t.stats.bleeding(periodLength) : t.stats.noEnd}
             </Text>
           </Pressable>
         ))}
-        {history.length > 0 && <Body muted>Silmek için bir döngüye basılı tut.</Body>}
+        {history.length > 0 && <Body muted>{t.stats.longPressHint}</Body>}
       </Card>
     </Screen>
   );

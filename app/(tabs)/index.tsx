@@ -1,20 +1,10 @@
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
-import {
-  buildCycleOverview,
-  FLOW_LABELS_TR,
-  formatShortDateTR,
-  getCurrentCycle,
-  getPhaseRanges,
-  MOOD_LABELS_TR,
-  PHASE_LABELS_TR,
-  SYMPTOM_LABELS_TR,
-  type CycleOverview,
-} from "@/core";
+import { buildCycleOverview, getCurrentCycle, getPhaseRanges, type CycleOverview } from "@/core";
 import { CycleRing } from "@/components/cycle-ring";
 import { PhaseStrip } from "@/components/phase-strip";
 import { Body, Button, Card, ErrorText, Heading, Loading, Screen } from "@/components/ui";
-import { errorMessage } from "@/lib/rules";
+import { useI18n, type Messages } from "@/i18n";
 import {
   useClearPeriodEnd,
   useCycleData,
@@ -30,21 +20,32 @@ import {
  * (`isBetween` uçları dahil) o gün `isOnPeriod` hâlâ true kalır. Bu ayrım
  * olmadan halka "Adet dönemindesin" demeyi sürdürürdü.
  */
-function ringText(overview: CycleOverview, endedToday: boolean): { title: string; subtitle: string | null } {
-  const phase = overview.phase ? PHASE_LABELS_TR[overview.phase] : null;
+function ringText(
+  t: Messages,
+  overview: CycleOverview,
+  endedToday: boolean,
+): { title: string; subtitle: string | null } {
+  const phase = overview.phase ? t.labels.phase[overview.phase] : null;
 
-  if (endedToday) return { title: "Adet dönemin bugün bitti", subtitle: phase };
-  if (overview.isOnPeriod) return { title: "Adet dönemindesin", subtitle: phase };
+  if (endedToday) return { title: t.today.endedToday, subtitle: phase };
+  if (overview.isOnPeriod) return { title: t.today.onPeriod, subtitle: phase };
 
   const days = overview.daysUntilNextPeriod;
-  if (days === null) return { title: "Henüz kayıt yok", subtitle: "İlk adetini işaretle" };
-  if (days > 0) return { title: `Adetine ${days} gün`, subtitle: phase };
-  if (days === 0) return { title: "Adetin bugün bekleniyor", subtitle: phase };
-  return { title: `Adetin ${Math.abs(days)} gün gecikti`, subtitle: phase };
+  if (days === null) return { title: t.today.noData, subtitle: t.today.noDataHint };
+  if (days > 0) return { title: t.today.daysUntil(days), subtitle: phase };
+  if (days === 0) return { title: t.today.dueToday, subtitle: phase };
+  return { title: t.today.late(Math.abs(days)), subtitle: phase };
+}
+
+/** Ondalık ayıracı dile göre: "36,6" / "36.6". */
+function formatTemperature(value: number, t: Messages): string {
+  const separator = t.day.temperaturePlaceholder.includes(",") ? "," : ".";
+  return String(value).replace(".", separator);
 }
 
 export default function TodayScreen() {
   const router = useRouter();
+  const { t, format, errorText } = useI18n();
   const today = useToday();
   const { data, isLoading, isRefetching, refetch, error } = useCycleData();
   const start = useStartPeriod();
@@ -68,14 +69,14 @@ export default function TodayScreen() {
   if (!view) {
     return (
       <Screen onRefresh={refetch} refreshing={isRefetching}>
-        <ErrorText message={errorMessage(error, "Veriler yüklenemedi.")} />
-        <Button label="Tekrar dene" onPress={() => refetch()} />
+        <ErrorText message={errorText(error, t.errors.loadFailed)} />
+        <Button label={t.common.retry} onPress={() => refetch()} />
       </Screen>
     );
   }
 
   const { overview, current, endedToday, ranges, todayLog } = view;
-  const text = ringText(overview, endedToday);
+  const text = ringText(t, overview, endedToday);
   const cycleLength = Math.max(15, Math.round(overview.stats.medianCycleLength));
   const mutationError = start.error ?? end.error ?? undo.error;
 
@@ -92,61 +93,60 @@ export default function TodayScreen() {
       {/* Üç hâl: dönem yok / sürüyor / bugün bitirildi. */}
       {endedToday && current ? (
         <Card style={{ alignItems: "center" }}>
-          <Body center>Bitişi bugün olarak işaretledin.</Body>
+          <Body center>{t.today.endMarkedToday}</Body>
           <Button
             variant="link"
-            label="Geri al"
+            label={t.today.undo}
             loading={undo.isPending}
             onPress={() => undo.mutate(current.id)}
           />
         </Card>
       ) : overview.isOnPeriod ? (
         <Button
-          label="Adetim bitti"
+          label={t.today.periodEnded}
           loading={end.isPending}
           onPress={() => end.mutate({ date: today })}
         />
       ) : (
-        <Button label="Adetim başladı" loading={start.isPending} onPress={() => start.mutate(today)} />
+        <Button label={t.today.periodStarted} loading={start.isPending} onPress={() => start.mutate(today)} />
       )}
-      <ErrorText message={mutationError ? errorMessage(mutationError) : null} />
+      <ErrorText message={mutationError ? errorText(mutationError) : null} />
 
       {overview.nextPeriod && (
         <Card>
-          <Heading>Sıradaki adet</Heading>
+          <Heading>{t.today.nextPeriod}</Heading>
           <Body>
-            {formatShortDateTR(overview.nextPeriod.startDate)} –{" "}
-            {formatShortDateTR(overview.nextPeriod.endDate)}
+            {format.shortDate(overview.nextPeriod.startDate)} – {format.shortDate(overview.nextPeriod.endDate)}
           </Body>
-          {overview.stats.usingDefaults && (
-            <Body muted>Tahmini değer: yeterli kayıt olunca isabet artar.</Body>
-          )}
+          {overview.stats.usingDefaults && <Body muted>{t.today.estimateNote}</Body>}
         </Card>
       )}
 
       <Card>
-        <Heading>Döngü fazları</Heading>
+        <Heading>{t.today.phases}</Heading>
         <PhaseStrip ranges={ranges} active={overview.phase} />
       </Card>
 
       <Card>
-        <Heading>Bugünün kaydı</Heading>
+        <Heading>{t.today.todayLog}</Heading>
         {todayLog ? (
           <>
-            {todayLog.flow && <Body>Kanama: {FLOW_LABELS_TR[todayLog.flow]}</Body>}
-            {todayLog.mood && <Body>Ruh hâli: {MOOD_LABELS_TR[todayLog.mood]}</Body>}
+            {todayLog.flow && <Body>{t.today.flowLine(t.labels.flow[todayLog.flow])}</Body>}
+            {todayLog.mood && <Body>{t.today.moodLine(t.labels.mood[todayLog.mood])}</Body>}
             {todayLog.symptoms.length > 0 && (
-              <Body>Belirtiler: {todayLog.symptoms.map((s) => SYMPTOM_LABELS_TR[s]).join(", ")}</Body>
+              <Body>{t.today.symptomsLine(todayLog.symptoms.map((s) => t.labels.symptom[s]).join(", "))}</Body>
             )}
-            {todayLog.temperatureC !== null && <Body>Bazal sıcaklık: {todayLog.temperatureC} °C</Body>}
+            {todayLog.temperatureC !== null && (
+              <Body>{t.today.temperatureLine(formatTemperature(todayLog.temperatureC, t))}</Body>
+            )}
             {todayLog.notes && <Body muted>{todayLog.notes}</Body>}
           </>
         ) : (
-          <Body muted>Bugün için kayıt yok.</Body>
+          <Body muted>{t.today.noLog}</Body>
         )}
         <Button
           variant="secondary"
-          label={todayLog ? "Düzenle" : "Kayıt ekle"}
+          label={todayLog ? t.common.edit : t.today.addLog}
           onPress={() => router.push(`/gun/${today}`)}
         />
       </Card>
