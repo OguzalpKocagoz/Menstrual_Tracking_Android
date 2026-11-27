@@ -14,7 +14,7 @@
     "android": {
       "package": "com.adetdongusu.dongum",
       "adaptiveIcon": {
-        "backgroundColor": "#FFE7EB",
+        "backgroundColor": "#19070e",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -36,13 +36,13 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Kayıtlarını korumak için uygulama kilidinde Face ID kullanılır."
+          "faceIDPermission": "Döngüm uses Face ID to lock your entries."
         }
       ],
       [
         "expo-notifications",
         {
-          "color": "#d03765"
+          "color": "#ff8dbc"
         }
       ],
       [
@@ -68,6 +68,15 @@
           "android": {
             "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }"
           }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#19070e",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
         }
       ]
     ]

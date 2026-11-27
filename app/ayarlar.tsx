@@ -8,7 +8,7 @@ import { useAds } from "@/lib/ads";
 import { authenticate, checkLockAvailability } from "@/lib/app-lock";
 import { useDeleteAllRecords } from "@/lib/data";
 import { LOCALE_NAMES, LOCALES, useI18n, type LanguagePreference } from "@/i18n";
-import { usePremium } from "@/lib/premium";
+import { PREMIUM_ENABLED, usePremium } from "@/lib/premium";
 import { DEFAULT_REMINDER_HOUR, REMINDER_HOURS } from "@/lib/reminder-plan";
 import { requestReminderPermission } from "@/lib/reminders";
 import { parseLength } from "@/lib/rules";
@@ -55,7 +55,7 @@ export default function SettingsScreen() {
     setDevPremium,
   } = useSettings();
   const { t, errorText } = useI18n();
-  const { isPremium } = usePremium();
+  const { isPremium, featuresUnlocked } = usePremium();
   const router = useRouter();
   const openPremium = () => router.push("/premium");
   const ads = useAds();
@@ -127,11 +127,13 @@ export default function SettingsScreen() {
 
   return (
     <Screen edges={[]}>
-      <Card>
-        <Heading>{t.settings.premiumTitle}</Heading>
-        <Body muted>{isPremium ? t.settings.premiumActive : t.settings.premiumHint}</Body>
-        {!isPremium && <Button label={t.settings.premiumCta} onPress={openPremium} />}
-      </Card>
+      {PREMIUM_ENABLED && (
+        <Card>
+          <Heading>{t.settings.premiumTitle}</Heading>
+          <Body muted>{isPremium ? t.settings.premiumActive : t.settings.premiumHint}</Body>
+          {!isPremium && <Button label={t.settings.premiumCta} onPress={openPremium} />}
+        </Card>
+      )}
 
       <Card>
         <Heading>{t.settings.theme}</Heading>
@@ -141,8 +143,8 @@ export default function SettingsScreen() {
             // parıltı rengi ve o temada kayan şekil.
             const preview = getPalette(theme);
             const sky = getSky(theme);
-            const selected = settings.theme === theme && (isPremium || !PREMIUM_THEMES.includes(theme));
-            const locked = !isPremium && PREMIUM_THEMES.includes(theme);
+            const locked = !featuresUnlocked && PREMIUM_THEMES.includes(theme);
+            const selected = settings.theme === theme && !locked;
             return (
               <Pressable
                 key={theme}
@@ -282,7 +284,7 @@ export default function SettingsScreen() {
         />
 
         <Heading>{t.settings.reminderTime}</Heading>
-        {isPremium ? (
+        {featuresUnlocked ? (
           <Row>
             {REMINDER_HOURS.map((hour) => (
               <Chip
@@ -301,7 +303,7 @@ export default function SettingsScreen() {
         )}
 
         <Heading>{t.settings.pill}</Heading>
-        {isPremium ? (
+        {featuresUnlocked ? (
           <>
             <ToggleRow label={t.settings.pill} value={settings.pillReminder} onChange={togglePill} />
             {settings.pillReminder && (
@@ -344,7 +346,7 @@ export default function SettingsScreen() {
       <Body muted>{t.disclaimer}</Body>
 
       {/* Yalnızca geliştirme sürümünde: ödeme bağlanana kadar premium'u denemek için. */}
-      {__DEV__ && (
+      {PREMIUM_ENABLED && __DEV__ && (
         <Card>
           <ToggleRow label={t.settings.devPremium} value={settings.devPremium} onChange={setDevPremium} />
         </Card>

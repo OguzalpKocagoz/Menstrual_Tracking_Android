@@ -4,14 +4,15 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@tanstack/react-query": "^5.108.4",
-    "expo": "~58.0.26",
+    "expo": "~58.1.0",
     "expo-build-properties": "~58.0.12",
     "expo-constants": "~58.0.16",
     "expo-linking": "~58.0.17",
     "expo-local-authentication": "~58.0.3",
     "expo-localization": "~58.0.5",
-    "expo-notifications": "~58.1.9",
-    "expo-router": "~58.0.32",
+    "expo-notifications": "~58.1.10",
+    "expo-router": "~58.0.33",
+    "expo-splash-screen": "~58.0.15",
     "expo-sqlite": "~58.0.18",
     "expo-status-bar": "~58.0.5",
     "expo-system-ui": "~58.0.7",
@@ -38,5 +39,6 @@
     "build:android": "npx eas-cli build --platform android",
     "lint": "expo lint"
   },
-  "private": true
+  "private": true,
+  "license": "UNLICENSED"
 }

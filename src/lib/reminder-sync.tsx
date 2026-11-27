@@ -16,12 +16,12 @@ export function ReminderSync() {
   const { data } = useCycleData();
   const today = useToday();
   const { t } = useI18n();
-  const { isPremium } = usePremium();
+  const { featuresUnlocked } = usePremium();
   const { reminderPeriodDays, reminderFertile } = settings;
   // Saat seçimi ve hap hatırlatması premium: abonelik bitince sessizce
   // ücretsiz davranışa döner (sabit saat, hap yok), kayıtlı tercih silinmez.
-  const hour = isPremium ? settings.reminderHour : DEFAULT_REMINDER_HOUR;
-  const pillHour = isPremium && settings.pillReminder ? settings.pillHour : null;
+  const hour = featuresUnlocked ? settings.reminderHour : DEFAULT_REMINDER_HOUR;
+  const pillHour = featuresUnlocked && settings.pillReminder ? settings.pillHour : null;
 
   useEffect(() => {
     if (!data) return;

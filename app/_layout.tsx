@@ -70,10 +70,10 @@ function Navigator() {
 
 function ThemedApp() {
   const { settings } = useSettings();
-  const { isPremium } = usePremium();
-  // Premium tema, abonelik yoksa uygulanmaz; seçim silinmez, yeniden abone
-  // olunca geri gelir.
-  const theme = !isPremium && PREMIUM_THEMES.includes(settings.theme) ? DEFAULT_THEME : settings.theme;
+  const { featuresUnlocked } = usePremium();
+  // Premium tema, özellik kilitliyse uygulanmaz; seçim silinmez, kilit
+  // açılınca geri gelir.
+  const theme = !featuresUnlocked && PREMIUM_THEMES.includes(settings.theme) ? DEFAULT_THEME : settings.theme;
   return (
     <I18nProvider preference={settings.language}>
     <ThemeProvider theme={theme}>
