@@ -1,10 +1,18 @@
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
-import { buildCycleOverview, getCurrentCycle, getPhaseRanges, type CycleOverview } from "@/core";
+import {
+  buildCycleOverview,
+  getCurrentCycle,
+  getCycleInsights,
+  getPhaseRanges,
+  getPredictionWindow,
+  type CycleOverview,
+} from "@/core";
 import { CycleRing } from "@/components/cycle-ring";
 import { PhaseStrip } from "@/components/phase-strip";
 import { Body, Button, Card, ErrorText, Heading, Loading, Screen } from "@/components/ui";
 import { useI18n, type Messages } from "@/i18n";
+import { useSettings } from "@/lib/settings";
 import {
   useClearPeriodEnd,
   useCycleData,
@@ -46,6 +54,7 @@ function formatTemperature(value: number, t: Messages): string {
 export default function TodayScreen() {
   const router = useRouter();
   const { t, format, errorText } = useI18n();
+  const { settings } = useSettings();
   const today = useToday();
   const { data, isLoading, isRefetching, refetch, error } = useCycleData();
   const start = useStartPeriod();
@@ -62,6 +71,8 @@ export default function TodayScreen() {
       endedToday: current?.periodEndDate === today,
       ranges: getPhaseRanges(overview.stats),
       todayLog: data.logs.find((log) => log.date === today) ?? null,
+      window: overview.nextPeriod ? getPredictionWindow(overview.nextPeriod, overview.stats) : null,
+      insights: getCycleInsights(data.cycles, today),
     };
   }, [data, today]);
 
@@ -75,7 +86,7 @@ export default function TodayScreen() {
     );
   }
 
-  const { overview, current, endedToday, ranges, todayLog } = view;
+  const { overview, current, endedToday, ranges, todayLog, window, insights } = view;
   const text = ringText(t, overview, endedToday);
   const cycleLength = Math.max(15, Math.round(overview.stats.medianCycleLength));
   const mutationError = start.error ?? end.error ?? undo.error;
@@ -112,13 +123,36 @@ export default function TodayScreen() {
       )}
       <ErrorText message={mutationError ? errorText(mutationError) : null} />
 
-      {overview.nextPeriod && (
+      {overview.nextPeriod && window && (
         <Card>
           <Heading>{t.today.nextPeriod}</Heading>
+          {/* Tek tarih yerine aralık: döngüler doğal olarak birkaç gün oynar. */}
           <Body>
-            {format.shortDate(overview.nextPeriod.startDate)} – {format.shortDate(overview.nextPeriod.endDate)}
+            {format.shortDate(window.earliest)} – {format.shortDate(window.latest)}
           </Body>
-          {overview.stats.usingDefaults && <Body muted>{t.today.estimateNote}</Body>}
+          <Body muted>{t.today.mostLikely(format.shortDate(window.likely))}</Body>
+          {overview.stats.usingDefaults ? (
+            <Body muted>{t.today.estimateNote}</Body>
+          ) : (
+            <Body muted>
+              {t.today.confidenceLine(
+                t.labels.confidence[overview.nextPeriod.confidence],
+                overview.stats.observedCycleCount,
+                window.spreadDays,
+              )}
+            </Body>
+          )}
+          {window.highlyVariable && <Body muted>{t.today.variableNote}</Body>}
+          <Button variant="link" label={t.today.howCalculated} onPress={() => router.push("/tahmin")} />
+        </Card>
+      )}
+
+      {/* Gözlemlerin ayrıntısı İstatistik ekranında; burada yalnızca kısa bir işaret. */}
+      {settings.showInsights && insights.length > 0 && (
+        <Card>
+          <Heading>{t.insights.title}</Heading>
+          <Body muted>{t.today.insightsTeaser(insights.length)}</Body>
+          <Button variant="link" label={t.today.seeInsights} onPress={() => router.push("/istatistik")} />
         </Card>
       )}
 

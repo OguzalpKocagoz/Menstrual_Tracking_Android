@@ -25,6 +25,8 @@ export interface Settings {
   reminderPeriodDays: number | null;
   /** Doğurgan dönemin ilk günü hatırlatılsın mı. */
   reminderFertile: boolean;
+  /** Döngü gözlemleri (klinik sınır karşılaştırması) gösterilsin mi. Varsayılan açık. */
+  showInsights: boolean;
   /** Döngü hatırlatmalarının saati (0–23). Premium; ücretsizde sabit saat kullanılır. */
   reminderHour: number;
   /** Her gün aynı saatte hap hatırlatması. Premium. */
@@ -56,6 +58,7 @@ const KEYS = {
   pillReminder: "pillReminder",
   pillHour: "pillHour",
   devPremium: "devPremium",
+  hideInsights: "hideInsights",
 } as const;
 
 function readNumber(value: string | undefined): number | null {
@@ -86,6 +89,7 @@ function loadSettings(): Settings {
     pillReminder: raw[KEYS.pillReminder] === "1",
     pillHour: readHour(raw[KEYS.pillHour], DEFAULT_PILL_HOUR),
     devPremium: raw[KEYS.devPremium] === "1",
+    showInsights: raw[KEYS.hideInsights] !== "1",
   };
 }
 
@@ -99,6 +103,7 @@ interface SettingsValue {
   setReminders: (periodDays: number | null, fertile: boolean) => void;
   setReminderSchedule: (schedule: Partial<ReminderSchedule>) => void;
   setDevPremium: (enabled: boolean) => void;
+  setShowInsights: (show: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsValue | null>(null);
@@ -152,6 +157,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((current) => ({ ...current, devPremium: enabled }));
   }, []);
 
+  const setShowInsights = useCallback((show: boolean) => {
+    writeSettingSync(KEYS.hideInsights, show ? null : "1");
+    setSettings((current) => ({ ...current, showInsights: show }));
+  }, []);
+
   const value = useMemo(
     () => ({
       settings,
@@ -163,6 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setReminders,
       setReminderSchedule,
       setDevPremium,
+      setShowInsights,
     }),
     [
       settings,
@@ -174,6 +185,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setReminders,
       setReminderSchedule,
       setDevPremium,
+      setShowInsights,
     ],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

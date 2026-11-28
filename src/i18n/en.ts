@@ -48,6 +48,7 @@ export const en: Messages = {
     invalidFlow: "Invalid flow intensity.",
     invalidMood: "Invalid mood.",
     temperatureRange: "Temperature must be between 34 and 43 °C.",
+    invalidBackup: "This file isn't a valid Döngüm backup or it's damaged. Your entries were not changed.",
     lengthRange: (field, min, max) =>
       `${field === "cycleLength" ? "Cycle length" : "Period length"} must be between ${min} and ${max} days.`,
   },
@@ -98,6 +99,11 @@ export const en: Messages = {
       low: "Low",
       none: "Very low",
     },
+    confidence: {
+      high: "High",
+      medium: "Medium",
+      low: "Low",
+    },
     theme: {
       rose: "Rose",
       bloom: "Lavender",
@@ -123,6 +129,73 @@ export const en: Messages = {
 
   contraception:
     "This is an estimate; the actual day of ovulation shifts from cycle to cycle. Do not use it for birth control.",
+
+  insights: {
+    title: "Cycle observations",
+    intro: "Your recent entries were compared with published clinical ranges. This is not a diagnosis.",
+    noRecentPeriod: {
+      title: "No period logged for a long time",
+      body: (days) =>
+        `It's been ${days} days since your last period started. Going three months without a period is one of the situations guidelines recommend having checked.`,
+    },
+    irregular: {
+      title: "Your cycle length varies a lot",
+      body: (shortest, longest, cycles) =>
+        `Over your last ${cycles} cycles, the shortest was ${shortest} and the longest ${longest} days (a ${longest - shortest}-day difference). In adults this difference usually stays within 7–9 days.`,
+    },
+    frequent: {
+      title: "Some of your cycles are short",
+      body: (count, cycles) =>
+        `${count} of your last ${cycles} cycles were shorter than 24 days. In adults a cycle usually lasts 24–38 days.`,
+    },
+    infrequent: {
+      title: "Some of your cycles are long",
+      body: (count, cycles) =>
+        `${count} of your last ${cycles} cycles were longer than 38 days. In adults a cycle usually lasts 24–38 days.`,
+    },
+    prolongedBleeding: {
+      title: "Your bleeding sometimes lasts long",
+      body: (count, periods) =>
+        `In ${count} of your last ${periods} periods, bleeding lasted longer than 8 days. Bleeding usually lasts no more than 8 days.`,
+    },
+    sourceFigo: "Source: FIGO 2018, normal menstrual parameters for adults",
+    sourceAcog: "Source: ACOG Committee Opinion No. 651",
+    advice:
+      "If your entries are correct, we suggest talking to a doctor about this. If you forgot to log a period or entered a wrong date, this observation may be wrong, so check your entries first.",
+    howDecided: "Ranges and sources",
+  },
+
+  method: {
+    title: "How is the prediction calculated?",
+    methodTitle: "Method",
+    steps: [
+      "Next period: the median length of your last 6 cycles is added to the start of your last period. The median is less affected by a single unusual cycle than the average.",
+      "Range: one standard deviation of your recent cycles (at least 1, at most 10 days). About two thirds of cycles fall within this range.",
+      "Ovulation: counted 14 days back from the next period. The phase before a period (luteal phase) is fairly constant from person to person.",
+      "Fertile window: from 5 days before to 1 day after ovulation. Sperm can survive for up to 5 days.",
+      "Gaps shorter than 15 or longer than 60 days are treated as logging mistakes and left out.",
+    ],
+    yourDataTitle: "Your data",
+    cyclesUsed: "Cycles used",
+    median: "Median cycle",
+    range: "Shortest – longest",
+    variation: "Standard deviation",
+    confidence: "Confidence",
+    noData: "No cycle length measured yet; an average 28-day cycle is assumed.",
+    accuracyTitle: "Accuracy of past predictions",
+    accuracyBody: (count, error) => `Your last ${count} predictions were off by ${error} days on average.`,
+    biasLate: (days) => `Your period usually comes ${days} days after the prediction.`,
+    biasEarly: (days) => `Your period usually comes ${days} days before the prediction.`,
+    accuracyNone:
+      "Not enough predictions to measure yet. When you log the start of a period, the prediction shown that day is saved and compared with the actual date.",
+    limitsTitle: "Limitations",
+    limitsBody:
+      "This is a calendar method: it only looks at past cycle lengths. It can't account for stress, illness, medication, birth control or breastfeeding. The ovulation day is an estimate, not a measurement, and must not be used for birth control.",
+    thresholdsTitle: "Ranges used for observations",
+    thresholdsBody:
+      "In adults, a normal cycle is 24–38 days, the difference between the shortest and longest cycle is 7–9 days depending on age, and bleeding lasts at most 8 days (FIGO 2018). In teens cycles can range from 21 to 45 days (ACOG). Because we don't know your age, observations use the wider end of these ranges, wait for at least 3 cycles and never alert on a single unusual cycle.",
+    sourcesTitle: "Sources",
+  },
 
   welcome: {
     tagline: "Track your cycle and see your next period coming.",
@@ -155,6 +228,13 @@ export const en: Messages = {
     periodStarted: "My period started",
     nextPeriod: "Next period",
     estimateNote: "Estimate: accuracy improves as you log more cycles.",
+    mostLikely: (date) => `Most likely: ${date}`,
+    confidenceLine: (level, cycles, spread) =>
+      `Confidence: ${level} · based on ${plural(cycles, "cycle", "cycles")}, ±${plural(spread, "day", "days")}`,
+    variableNote: "Your cycles vary a lot, so the range is wide and the prediction is less reliable.",
+    howCalculated: "How is this calculated?",
+    insightsTeaser: (count) => `Your entries show ${plural(count, "observation", "observations")} worth a look.`,
+    seeInsights: "See observations",
     phases: "Cycle phases",
     todayLog: "Today's log",
     flowLine: (value) => `Flow: ${value}`,
@@ -236,6 +316,10 @@ export const en: Messages = {
     language: "Language",
     languageAuto: "Automatic",
     languageAutoHint: "When set to automatic, your phone's language is used.",
+    insights: "Cycle observations",
+    insightsToggle: "Show observations",
+    insightsHint:
+      "If your entries fall outside clinical ranges, you'll see a note on the Today and Insights screens. No notifications are sent.",
     lengths: "Default lengths",
     lengthsHint: "Leave empty to calculate them from your entries.",
     cycleLength: "Cycle length (days)",
@@ -269,6 +353,16 @@ export const en: Messages = {
     data: "Your data",
     dataHint:
       "Your entries are stored only on this phone and never sent to a server. Uninstalling the app deletes them; if your phone's Google backup is on, they're restored on a new phone.",
+    exportData: "Export entries",
+    exportHint:
+      "Save your entries to a file and send it to Drive, your email or your new phone. The file is not encrypted and contains health information, so keep it somewhere you trust.",
+    exportTitle: "Döngüm backup",
+    importData: "Restore from file",
+    importTitle: "Restore this backup?",
+    importBody: (cycles, logs) =>
+      `The entries on this phone will be deleted and replaced with ${cycles} cycles and ${logs} daily entries from the file. This can't be undone.`,
+    importConfirm: "Restore",
+    importDone: (cycles, logs) => `Restored ${cycles} cycles and ${logs} daily entries.`,
     deleteAll: "Delete all entries",
     deleteAllBody: "All cycle and daily entries on this phone will be permanently deleted. This can't be undone.",
   },

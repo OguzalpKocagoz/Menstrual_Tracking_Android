@@ -6,7 +6,8 @@ import { ShapeGlyph } from "@/components/night-sky";
 import { Body, Button, Card, Chip, ErrorText, Field, Heading, Row, Screen } from "@/components/ui";
 import { useAds } from "@/lib/ads";
 import { authenticate, checkLockAvailability } from "@/lib/app-lock";
-import { useDeleteAllRecords } from "@/lib/data";
+import { pickBackup, shareBackup } from "@/lib/backup-file";
+import { useCycleData, useDeleteAllRecords, useRestoreBackup } from "@/lib/data";
 import { LOCALE_NAMES, LOCALES, useI18n, type LanguagePreference } from "@/i18n";
 import { PREMIUM_ENABLED, usePremium } from "@/lib/premium";
 import { DEFAULT_REMINDER_HOUR, REMINDER_HOURS } from "@/lib/reminder-plan";
@@ -53,6 +54,7 @@ export default function SettingsScreen() {
     setReminders,
     setReminderSchedule,
     setDevPremium,
+    setShowInsights,
   } = useSettings();
   const { t, errorText } = useI18n();
   const { isPremium, featuresUnlocked } = usePremium();
@@ -63,6 +65,10 @@ export default function SettingsScreen() {
   const [reminderError, setReminderError] = useState<string | null>(null);
   const { palette } = useTheme();
   const deleteAll = useDeleteAllRecords();
+  const cycleData = useCycleData();
+  const restore = useRestoreBackup();
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
   const [cycleLength, setCycleLength] = useState(String(settings.defaultCycleLength ?? ""));
   const [periodLength, setPeriodLength] = useState(String(settings.defaultPeriodLength ?? ""));
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +122,37 @@ export default function SettingsScreen() {
       return;
     }
     setReminderSchedule({ pillReminder: enable });
+  }
+
+  async function exportData() {
+    setBackupError(null);
+    setBackupMessage(null);
+    try {
+      if (!cycleData.data) throw new Error("not loaded");
+      await shareBackup({ cycles: cycleData.data.cycles, logs: cycleData.data.logs }, t.settings.exportTitle);
+    } catch (caught) {
+      setBackupError(errorText(caught, t.errors.saveFailed));
+    }
+  }
+
+  async function importData() {
+    setBackupError(null);
+    setBackupMessage(null);
+    try {
+      const backup = await pickBackup();
+      if (!backup) return;
+      const done = () => setBackupMessage(t.settings.importDone(backup.cycles.length, backup.logs.length));
+      Alert.alert(t.settings.importTitle, t.settings.importBody(backup.cycles.length, backup.logs.length), [
+        { text: t.common.cancel, style: "cancel" },
+        {
+          text: t.settings.importConfirm,
+          style: "destructive",
+          onPress: () => restore.mutate(backup, { onSuccess: done }),
+        },
+      ]);
+    } catch (caught) {
+      setBackupError(errorText(caught, t.errors.loadFailed));
+    }
   }
 
   function confirmDeleteAll() {
@@ -219,6 +256,13 @@ export default function SettingsScreen() {
           ))}
         </Row>
         <Body muted>{t.settings.languageAutoHint}</Body>
+      </Card>
+
+      <Card>
+        <Heading>{t.settings.insights}</Heading>
+        <ToggleRow label={t.settings.insightsToggle} value={settings.showInsights} onChange={setShowInsights} />
+        <Body muted>{t.settings.insightsHint}</Body>
+        <Button variant="link" label={t.insights.howDecided} onPress={() => router.push("/tahmin")} />
       </Card>
 
       <Card>
@@ -334,6 +378,16 @@ export default function SettingsScreen() {
       <Card>
         <Heading>{t.settings.data}</Heading>
         <Body muted>{t.settings.dataHint}</Body>
+        <Button label={t.settings.exportData} variant="secondary" onPress={exportData} />
+        <Button
+          label={t.settings.importData}
+          variant="secondary"
+          loading={restore.isPending}
+          onPress={importData}
+        />
+        <Body muted>{t.settings.exportHint}</Body>
+        {backupMessage && <Body>{backupMessage}</Body>}
+        <ErrorText message={backupError ?? (restore.error ? errorText(restore.error) : null)} />
         <ErrorText message={deleteAll.error ? errorText(deleteAll.error) : null} />
         <Button
           label={t.settings.deleteAll}

@@ -35,6 +35,8 @@ Hesap açman gerekmez. Adet, belirti, ruh hâli ve notların yalnızca telefonun
 NELER YAPABİLİRSİN
 • Adetinin başladığı ve bittiği günü tek dokunuşla işaretle
 • Sıradaki adetini, doğurgan pencereni ve tahmini yumurtlama gününü gör
+• Tahmin tek tarih değil, döngülerine göre bir aralık olarak gösterilir; güven düzeyini ve nasıl hesaplandığını görürsün
+• Kayıtların yayımlanmış klinik sınırların (FIGO, ACOG) dışına çıkarsa kaynağıyla birlikte bilgi verilir (teşhis değildir)
 • Takvimde geçmiş ve tahmini günleri renklerle izle
 • Kanama yoğunluğu, belirtiler, ruh hâli, bazal sıcaklık ve not ekle
 • Döngü uzunluğu, düzenlilik ve geçmiş istatistiklerini incele
@@ -75,6 +77,8 @@ No account needed. Your periods, symptoms, moods and notes are stored only on yo
 WHAT YOU CAN DO
 • Mark the start and end of your period with one tap
 • See your next period, fertile window and predicted ovulation
+• Predictions are shown as a range based on your own cycles, with a confidence level and an explanation of how they are calculated
+• If your entries fall outside published clinical ranges (FIGO, ACOG), you get a note with the source (not a diagnosis)
 • Follow past and predicted days on a color-coded calendar
 • Log flow, symptoms, mood, basal temperature and notes
 • Explore cycle length, regularity and history

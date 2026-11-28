@@ -15,3 +15,4 @@ export * from "./stats";
 export * from "./predict";
 export * from "./calendar";
 export * from "./accuracy";
+export * from "./insights";

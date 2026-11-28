@@ -21,7 +21,8 @@ export type UserErrorCode =
   | "invalidFlow"
   | "invalidMood"
   | "temperatureRange"
-  | "lengthRange";
+  | "lengthRange"
+  | "invalidBackup";
 
 export interface UserErrorParams {
   min?: number;

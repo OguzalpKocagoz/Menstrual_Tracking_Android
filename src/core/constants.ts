@@ -34,3 +34,28 @@ export const RECENT_CYCLE_SAMPLE_SIZE = 6;
 
 /** Tahminin "yüksek güvenilir" sayılması için gereken en az döngü sayısı. */
 export const MIN_CYCLES_FOR_HIGH_CONFIDENCE = 3;
+
+/**
+ * Döngü gözlemleri (`insights.ts`) için klinik sınırlar.
+ *
+ * Kaynak: FIGO AUB System 1 (Munro ve ark., Int J Gynaecol Obstet 2018) —
+ * yetişkinlerde normal sıklık 24–38 gün, en kısa ile en uzun döngü farkı yaşa
+ * göre ≤7–9 gün, kanama ≤8 gün. ACOG (Committee Opinion 651) üç ay adet
+ * görmemeyi değerlendirme gerektiren durumlar arasında sayar.
+ *
+ * Eşikler bilerek TEMKİNLİ seçildi: kullanıcının yaşını bilmiyoruz (gençlerde
+ * ve 40 yaş üstünde döngüler doğal olarak daha değişken) ve unutulmuş bir
+ * kayıt tek başına yanlış alarm üretebilir. Bu yüzden düzensizlikte FIGO'nun
+ * en geniş sınırının (9 gün) üstü, sıklık/kanama için tek değil en az iki
+ * döngü aranır (Apple Sağlık'ın döngü sapması bildirimleriyle aynı yaklaşım).
+ */
+export const NORMAL_CYCLE_MIN_DAYS = 24;
+export const NORMAL_CYCLE_MAX_DAYS = 38;
+export const IRREGULAR_RANGE_DAYS = 10;
+export const NORMAL_PERIOD_MAX_DAYS = 8;
+/** Sıklık ve kanama gözlemleri için sınır dışı döngü sayısı. */
+export const OUT_OF_RANGE_MIN_COUNT = 2;
+/** Gözlem yapılabilmesi için gereken en az ölçülmüş döngü uzunluğu. */
+export const MIN_CYCLES_FOR_INSIGHTS = 3;
+/** Son adetten bu yana bu kadar gün geçtiyse gözlem gösterilir. */
+export const NO_PERIOD_ALERT_DAYS = 90;

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { AppState } from "react-native";
+import type { Cycle, DailyLog } from "@/core";
 import * as store from "./db";
 import type { DailyLogInput } from "./rules";
 import { getToday } from "./today";
@@ -73,6 +74,14 @@ export function useDeleteCycle() {
 
 export function useDeleteAllRecords() {
   return useInvalidatingMutation(() => store.deleteAllRecords(), ["gun"]);
+}
+
+/** Yedekten geri yükleme; bütün ekranlar yeni kayıtlarla yenilenir. */
+export function useRestoreBackup() {
+  return useInvalidatingMutation(
+    (data: { cycles: Cycle[]; logs: DailyLog[] }) => store.replaceAllRecords(data.cycles, data.logs),
+    ["gun"],
+  );
 }
 
 export function useDailyLog(date: string) {

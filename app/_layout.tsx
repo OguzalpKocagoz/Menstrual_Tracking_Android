@@ -62,6 +62,7 @@ function Navigator() {
         <Stack.Screen name="hosgeldin" options={{ headerShown: false }} />
         <Stack.Screen name="gun/[date]" options={{ title: t.tabs.day }} />
         <Stack.Screen name="ayarlar" options={{ title: t.tabs.settings }} />
+        <Stack.Screen name="tahmin" options={{ title: t.method.title }} />
         <Stack.Screen name="premium" options={{ title: t.settings.premiumTitle, presentation: "modal" }} />
       </Stack>
     </NavigationThemeProvider>

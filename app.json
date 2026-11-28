@@ -2,6 +2,7 @@
   "expo": {
     "name": "Döngüm",
     "slug": "dongum",
+    "owner": "ddmo",
     "scheme": "dongum",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +10,39 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#19070e",
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.adetdongusu.dongum",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "package": "com.adetdongusu.dongum",
@@ -59,7 +92,10 @@
         {
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
-          "delayAppMeasurementInit": true
+          "delayAppMeasurementInit": true,
+          "skAdNetworkItems": [
+            "cstr6suwn9.skadnetwork"
+          ]
         }
       ],
       [
@@ -78,7 +114,19 @@
           "imageWidth": 180,
           "resizeMode": "contain"
         }
+      ],
+      "expo-sharing",
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Döngüm uses this only to show you more relevant ads. Your cycle and health entries are never used for ads."
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "53ac78fc-fbc2-4de4-8e09-f3d862232ff3"
+      }
+    }
   }
 }

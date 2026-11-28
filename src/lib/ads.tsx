@@ -1,14 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
-import mobileAds, {
-  AdsConsent,
-  AdsConsentPrivacyOptionsRequirementStatus,
-  BannerAd,
-  BannerAdSize,
-  MaxAdContentRating,
-  TestIds,
-} from "react-native-google-mobile-ads";
+import { isRunningInExpoGo } from "expo";
+import { Platform, StyleSheet, View } from "react-native";
+import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
 import { usePremium } from "./premium";
+
+type AdsModule = typeof import("react-native-google-mobile-ads");
+
+/**
+ * Reklam modülü yalnızca kendi derlememizde yüklenir. Expo Go'nun içinde
+ * Google reklam modülü yok; statik import edilse uygulama Expo Go'da açılışta
+ * çökerdi. Expo Go'da (telefonda hızlı deneme) reklam hiç gösterilmez, geri
+ * kalan her şey çalışır.
+ */
+const Ads: AdsModule | null = isRunningInExpoGo()
+  ? null
+  : // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("react-native-google-mobile-ads") as AdsModule);
 
 /**
  * Reklamlar (AdMob).
@@ -26,6 +33,8 @@ import { usePremium } from "./premium";
  *   banner. Tam ekran (interstitial) reklam yok; kayıt girerken, kilit ve
  *   karşılama ekranlarında reklam yok.
  * - Premium kullanıcı hiç reklam görmez; SDK onlar için başlatılmaz bile.
+ * - iPhone'da Apple'ın takip izni (ATT) rıza formundan SONRA, SDK başlamadan
+ *   önce sorulur. Reddedilirse de reklam gösterilir, yalnızca kişiselleştirilmez.
  */
 
 /**
@@ -36,7 +45,9 @@ import { usePremium } from "./premium";
  */
 const PRODUCTION_BANNER_ID = "";
 
-const BANNER_ID = __DEV__ || !PRODUCTION_BANNER_ID ? TestIds.ADAPTIVE_BANNER : PRODUCTION_BANNER_ID;
+function bannerId(ads: AdsModule): string {
+  return __DEV__ || !PRODUCTION_BANNER_ID ? ads.TestIds.ADAPTIVE_BANNER : PRODUCTION_BANNER_ID;
+}
 
 interface AdsValue {
   /** Rıza alındı ve SDK başlatıldı; banner istenebilir. */
@@ -56,18 +67,25 @@ const AdsContext = createContext<AdsValue>({
 let sdkStarted: Promise<void> | null = null;
 
 /** SDK yalnızca bir kez başlatılır. */
-function startSdk(): Promise<void> {
+function startSdk(ads: AdsModule): Promise<void> {
   sdkStarted ??= (async () => {
-    await mobileAds().setRequestConfiguration({ maxAdContentRating: MaxAdContentRating.T });
-    await mobileAds().initialize();
+    await ads.default().setRequestConfiguration({ maxAdContentRating: ads.MaxAdContentRating.T });
+    await ads.default().initialize();
   })();
   return sdkStarted;
 }
 
-async function startIfAllowed(): Promise<boolean> {
-  const { canRequestAds } = await AdsConsent.getConsentInfo();
+let trackingAsked: Promise<unknown> | null = null;
+
+async function startIfAllowed(ads: AdsModule): Promise<boolean> {
+  const { canRequestAds } = await ads.AdsConsent.getConsentInfo();
   if (!canRequestAds) return false;
-  await startSdk();
+  if (Platform.OS === "ios") {
+    // Bir kez sorulur; sistem ikinci kez pencere göstermez, sonucu hatırlar.
+    trackingAsked ??= requestTrackingPermissionsAsync().catch(() => undefined);
+    await trackingAsked;
+  }
+  await startSdk(ads);
   return true;
 }
 
@@ -77,22 +95,23 @@ export function AdsProvider({ enabled, children }: { enabled: boolean; children:
   const [privacyOptionsRequired, setPrivacyOptionsRequired] = useState(false);
 
   useEffect(() => {
-    if (isPremium || !enabled) return;
+    const ads = Ads;
+    if (!ads || isPremium || !enabled) return;
     let alive = true;
 
     const update = async () => {
-      const started = await startIfAllowed();
-      const info = await AdsConsent.getConsentInfo();
+      const started = await startIfAllowed(ads);
+      const info = await ads.AdsConsent.getConsentInfo();
       if (!alive) return;
       setReady(started);
       setPrivacyOptionsRequired(
-        info.privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED,
+        info.privacyOptionsRequirementStatus === ads.AdsConsentPrivacyOptionsRequirementStatus.REQUIRED,
       );
     };
 
     // Google'ın önerdiği sıra: rıza toplanırken önceki oturumdan kalan rızayla
     // paralel başlatmayı da dene; rıza formu hata verse bile önceki karar geçerli.
-    AdsConsent.gatherConsent()
+    ads.AdsConsent.gatherConsent()
       .catch(() => undefined)
       .finally(() => {
         update().catch(() => {});
@@ -105,8 +124,9 @@ export function AdsProvider({ enabled, children }: { enabled: boolean; children:
   }, [isPremium, enabled]);
 
   const openPrivacyOptions = useCallback(async () => {
-    await AdsConsent.showPrivacyOptionsForm();
-    const started = await startIfAllowed().catch(() => false);
+    if (!Ads) return;
+    await Ads.AdsConsent.showPrivacyOptionsForm();
+    const started = await startIfAllowed(Ads).catch(() => false);
     setReady(started);
   }, []);
 
@@ -128,11 +148,12 @@ export function useAds(): AdsValue {
 export function AdBanner() {
   const { ready } = useAds();
   const [failed, setFailed] = useState(false);
-  if (!ready || failed) return null;
+  if (!Ads || !ready || failed) return null;
+  const { BannerAd, BannerAdSize } = Ads;
   return (
     <View style={styles.banner}>
       <BannerAd
-        unitId={BANNER_ID}
+        unitId={bannerId(Ads)}
         size={BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER}
         onAdFailedToLoad={() => setFailed(true)}
       />

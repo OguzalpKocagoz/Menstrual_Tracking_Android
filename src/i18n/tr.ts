@@ -4,6 +4,7 @@ import type {
   FertilityLevel,
   FlowIntensity,
   Mood,
+  PredictionConfidence,
   Symptom,
 } from "@/core";
 
@@ -69,6 +70,7 @@ export const tr = {
     invalidFlow: "Geçersiz kanama yoğunluğu.",
     invalidMood: "Geçersiz ruh hâli.",
     temperatureRange: "Sıcaklık 34–43 °C arasında olmalı.",
+    invalidBackup: "Bu dosya geçerli bir Döngüm yedeği değil ya da bozulmuş. Kayıtlarına dokunulmadı.",
     lengthRange: (field: "cycleLength" | "periodLength", min: number, max: number) =>
       `${field === "cycleLength" ? "Döngü uzunluğu" : "Regl süresi"} ${min}–${max} gün arasında olmalı.`,
   },
@@ -125,6 +127,11 @@ export const tr = {
       low: "Düşük",
       none: "Çok düşük",
     }),
+    confidence: record<PredictionConfidence, string>({
+      high: "Yüksek",
+      medium: "Orta",
+      low: "Düşük",
+    }),
     theme: record<AppTheme, string>({
       rose: "Gül",
       bloom: "Lavanta",
@@ -152,6 +159,74 @@ export const tr = {
   /** Doğurganlık bilgisinin gösterildiği her yerde. */
   contraception:
     "Bu bir tahmindir; gerçek yumurtlama günü döngüden döngüye kayar. Doğum kontrolü amacıyla kullanılamaz.",
+
+  insights: {
+    title: "Döngü gözlemleri",
+    intro: "Son kayıtların, yayımlanmış klinik sınırlarla karşılaştırıldı. Bu bir teşhis değildir.",
+    noRecentPeriod: {
+      title: "Uzun süredir adet kaydı yok",
+      body: (days: number) =>
+        `Son adet başlangıcından bu yana ${days} gün geçti. Üç ay adet görmemek, kılavuzlarda değerlendirilmesi önerilen durumlar arasında.`,
+    },
+    irregular: {
+      title: "Döngü uzunluğun çok değişiyor",
+      body: (shortest: number, longest: number, cycles: number) =>
+        `Son ${cycles} döngünde en kısası ${shortest}, en uzunu ${longest} gün (fark ${longest - shortest} gün). Yetişkinlerde bu fark genellikle 7–9 günü geçmez.`,
+    },
+    frequent: {
+      title: "Bazı döngülerin kısa",
+      body: (count: number, cycles: number) =>
+        `Son ${cycles} döngünün ${count} tanesi 24 günden kısa. Yetişkinlerde döngü genellikle 24–38 gün sürer.`,
+    },
+    infrequent: {
+      title: "Bazı döngülerin uzun",
+      body: (count: number, cycles: number) =>
+        `Son ${cycles} döngünün ${count} tanesi 38 günden uzun. Yetişkinlerde döngü genellikle 24–38 gün sürer.`,
+    },
+    prolongedBleeding: {
+      title: "Kanaman bazen uzun sürüyor",
+      body: (count: number, periods: number) =>
+        `Son ${periods} adetinin ${count} tanesinde kanama 8 günden uzun sürdü. Kanamanın genellikle 8 günü geçmediği kabul edilir.`,
+    },
+    sourceFigo: "Kaynak: FIGO 2018, yetişkinler için normal adet ölçütleri",
+    sourceAcog: "Kaynak: ACOG Görüş No. 651",
+    advice:
+      "Kayıtların doğruysa bunu bir doktorla konuşmanı öneririz. Bir adeti işaretlemeyi unuttuysan ya da yanlış tarih girdiysen gözlem yanlış olabilir; önce kayıtlarını kontrol et.",
+    howDecided: "Sınırlar ve kaynaklar",
+  },
+
+  method: {
+    title: "Tahmin nasıl hesaplanıyor?",
+    methodTitle: "Yöntem",
+    steps: [
+      "Sıradaki adet: Son 6 döngünün ortanca (medyan) uzunluğu, son adet başlangıcına eklenir. Ortanca, tek bir aykırı döngüden ortalamaya göre daha az etkilenir.",
+      "Aralık: Son döngülerin standart sapması kadar (en az 1, en çok 10 gün). Döngülerin yaklaşık üçte ikisi bu aralığa düşer.",
+      "Yumurtlama: Sıradaki adetten 14 gün geriye sayılır. Adet öncesi dönem (luteal faz) kişiden kişiye görece sabittir.",
+      "Doğurgan pencere: Yumurtlamadan 5 gün önce ile 1 gün sonrası. Sperm 5 güne kadar canlı kalabilir.",
+      "15 günden kısa ya da 60 günden uzun aralıklar kayıt hatası sayılır ve hesaba katılmaz.",
+    ],
+    yourDataTitle: "Senin verilerin",
+    cyclesUsed: "Hesaba giren döngü",
+    median: "Ortanca döngü",
+    range: "En kısa – en uzun",
+    variation: "Standart sapma",
+    confidence: "Tahmin güveni",
+    noData: "Henüz döngü uzunluğu ölçülemedi; 28 günlük ortalama bir döngü varsayılıyor.",
+    accuracyTitle: "Geçmiş tahminlerin isabeti",
+    accuracyBody: (count: number, error: string) =>
+      `Son ${count} tahmin, gerçekleşen tarihten ortalama ${error} gün saptı.`,
+    biasLate: (days: string) => `Adetin genelde tahminden ${days} gün sonra geliyor.`,
+    biasEarly: (days: string) => `Adetin genelde tahminden ${days} gün önce geliyor.`,
+    accuracyNone:
+      "Henüz ölçecek kadar tahmin yok. Adet başlangıcını girdiğin gün ekranda gösterilen tahmin saklanır ve gerçekleşen tarihle karşılaştırılır.",
+    limitsTitle: "Sınırlar",
+    limitsBody:
+      "Bu bir takvim yöntemidir: yalnızca geçmiş döngü uzunluklarına bakar. Stres, hastalık, ilaçlar, doğum kontrolü ya da emzirme gibi etkenleri bilemez. Yumurtlama günü bir ölçüm değil, tahmindir; doğum kontrolü için kullanılamaz.",
+    thresholdsTitle: "Gözlemlerde kullanılan sınırlar",
+    thresholdsBody:
+      "Yetişkinlerde normal döngü 24–38 gün, en kısa ile en uzun döngü farkı yaşa göre 7–9 gün, kanama en çok 8 gün kabul edilir (FIGO 2018). Gençlerde döngüler 21–45 gün arasında değişebilir (ACOG). Yaşını bilmediğimiz için gözlemler bu sınırların geniş tarafını kullanır, en az 3 döngü bekler ve tek bir aykırı döngüyle uyarı vermez.",
+    sourcesTitle: "Kaynaklar",
+  },
 
   welcome: {
     tagline: "Adet döngünü takip et, sıradaki dönemini önceden gör.",
@@ -184,6 +259,13 @@ export const tr = {
     periodStarted: "Adetim başladı",
     nextPeriod: "Sıradaki adet",
     estimateNote: "Tahmini değer: yeterli kayıt olunca isabet artar.",
+    mostLikely: (date: string) => `En olası gün: ${date}`,
+    confidenceLine: (level: string, cycles: number, spread: number) =>
+      `Tahmin güveni: ${level} · ${cycles} döngüye dayanıyor, ±${spread} gün`,
+    variableNote: "Döngülerin çok değişken olduğu için aralık geniş ve tahmin daha az güvenilir.",
+    howCalculated: "Bu tahmin nasıl hesaplanıyor?",
+    insightsTeaser: (count: number) => `Kayıtlarında dikkat çeken ${count} gözlem var.`,
+    seeInsights: "Gözlemleri gör",
     phases: "Döngü fazları",
     todayLog: "Bugünün kaydı",
     flowLine: (value: string) => `Kanama: ${value}`,
@@ -265,6 +347,10 @@ export const tr = {
     language: "Dil",
     languageAuto: "Otomatik",
     languageAutoHint: "Otomatik seçiliyken telefonunun dili kullanılır.",
+    insights: "Döngü gözlemleri",
+    insightsToggle: "Gözlemleri göster",
+    insightsHint:
+      "Kayıtların klinik sınırların dışına çıkarsa Bugün ve İstatistik ekranlarında bilgi verilir. Bildirim gönderilmez.",
     lengths: "Varsayılan uzunluklar",
     lengthsHint: "Boş bırakılırsa kayıtlarından hesaplanır.",
     cycleLength: "Döngü uzunluğu (gün)",
@@ -298,6 +384,16 @@ export const tr = {
     data: "Verilerin",
     dataHint:
       "Kayıtların yalnızca bu telefonda saklanır, hiçbir sunucuya gönderilmez. Uygulamayı silersen kayıtlar da silinir; telefonunun Google yedeği açıksa yeni telefona geri yüklenir.",
+    exportData: "Kayıtları dışa aktar",
+    exportHint:
+      "Kayıtlarını bir dosyaya kaydedip Drive'a, e-postana ya da yeni telefonuna gönderebilirsin. Dosya şifresiz; sağlık bilgilerin içerdiği için güvendiğin bir yerde sakla.",
+    exportTitle: "Döngüm yedeği",
+    importData: "Dosyadan geri yükle",
+    importTitle: "Yedek geri yüklensin mi?",
+    importBody: (cycles: number, logs: number) =>
+      `Bu telefondaki kayıtların silinip dosyadaki ${cycles} döngü ve ${logs} günlük kaydıyla değiştirilecek. Geri alınamaz.`,
+    importConfirm: "Geri yükle",
+    importDone: (cycles: number, logs: number) => `Geri yüklendi: ${cycles} döngü, ${logs} günlük kayıt.`,
     deleteAll: "Tüm kayıtları sil",
     deleteAllBody: "Bu telefondaki bütün döngü ve günlük kayıtların kalıcı olarak silinecek. Geri alınamaz.",
   },

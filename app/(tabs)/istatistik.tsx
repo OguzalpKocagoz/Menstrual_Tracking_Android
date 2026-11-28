@@ -3,13 +3,16 @@ import { Alert, Pressable, Text, View } from "react-native";
 import {
   computeCycleStats,
   daysBetween,
+  getCycleInsights,
   inclusiveDayCount,
   sortCycles,
 } from "@/core";
+import { InsightList } from "@/components/insight-list";
 import { Body, Card, ErrorText, Heading, Loading, Screen } from "@/components/ui";
 import { useI18n } from "@/i18n";
 import { AdBanner } from "@/lib/ads";
-import { useCycleData, useDeleteCycle } from "@/lib/data";
+import { useCycleData, useDeleteCycle, useToday } from "@/lib/data";
+import { useSettings } from "@/lib/settings";
 import { useTheme } from "@/lib/theme";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -25,6 +28,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function StatsScreen() {
   const { palette } = useTheme();
   const { t, format, errorText } = useI18n();
+  const { settings } = useSettings();
+  const today = useToday();
   const { data, isLoading, isRefetching, refetch } = useCycleData();
   const remove = useDeleteCycle();
 
@@ -39,11 +44,11 @@ export default function StatsScreen() {
         periodLength: cycle.periodEndDate ? inclusiveDayCount(cycle.startDate, cycle.periodEndDate) : null,
       }))
       .reverse();
-    return { stats: computeCycleStats(data.cycles), history };
-  }, [data]);
+    return { stats: computeCycleStats(data.cycles), history, insights: getCycleInsights(data.cycles, today) };
+  }, [data, today]);
 
   if (isLoading || !view) return <Loading />;
-  const { stats, history } = view;
+  const { stats, history, insights } = view;
   const mark = stats.usingDefaults ? " *" : "";
   const days = (n: number) => t.common.days(n);
 
@@ -56,6 +61,8 @@ export default function StatsScreen() {
 
   return (
     <Screen onRefresh={refetch} refreshing={isRefetching} edges={[]} footer={<AdBanner />}>
+      {settings.showInsights && <InsightList insights={insights} />}
+
       <Card>
         <Heading>{t.stats.cycle}</Heading>
         <Stat label={t.stats.average} value={`${days(stats.averageCycleLength)}${mark}`} />

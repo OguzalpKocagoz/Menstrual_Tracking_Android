@@ -9,10 +9,11 @@ import type { Cycle } from "./types";
  * girilen döngüler ölçüme girmez, çünkü onlar için kullanıcıya bir tahmin
  * gösterilmemişti.
  *
- * Bu ölçüm kullanıcıya gösterilmez. "Tahminlerimiz iki gün şaşıyor" bilgisi
- * kullanıcının işine yaramaz, yalnızca güvenini azaltır; asıl faydası
- * algoritmayı değiştirdiğimizde gerçekten iyileştirip iyileştirmediğimizi
- * anlayabilmek.
+ * Kullanıcıya "Tahmin nasıl hesaplanıyor?" ekranında gösterilir (ilk tasarımda
+ * gizliydi; uygulamanın bilimsel/şeffaf yönde ilerlemesiyle karar değişti).
+ * Tahminin ne kadar şaştığını açıkça söylemek, isabet iddiasını yöntemle
+ * birlikte sunmak demek — mağazaların sağlık uygulamalarından beklediği de bu.
+ * Ayrıca algoritma değiştiğinde gerçekten iyileşip iyileşmediğini gösterir.
  */
 
 export interface PredictionSample {
@@ -52,8 +53,13 @@ export interface PredictionAccuracy {
   samples: PredictionSample[];
 }
 
-/** Kaydedilmiş tahminleri gerçekleşen tarihlerle karşılaştırır. */
-export function computePredictionAccuracy(cycles: readonly Cycle[]): PredictionAccuracy {
+/**
+ * Kaydedilmiş tahminleri gerçekleşen tarihlerle karşılaştırır.
+ *
+ * `limit` verilirse yalnızca en yeni N ölçüm sayılır: algoritma ve kullanıcının
+ * döngüsü zamanla değişir, yıllar önceki bir sapma bugünkü isabeti anlatmaz.
+ */
+export function computePredictionAccuracy(cycles: readonly Cycle[], limit?: number): PredictionAccuracy {
   const samples: PredictionSample[] = [];
 
   for (const cycle of sortCycles(cycles)) {
@@ -66,6 +72,8 @@ export function computePredictionAccuracy(cycles: readonly Cycle[]): PredictionA
       error: daysBetween(predicted, cycle.startDate),
     });
   }
+
+  if (limit !== undefined) samples.splice(0, Math.max(0, samples.length - limit));
 
   if (samples.length === 0) {
     return { sampleCount: 0, meanAbsoluteError: null, bias: null, samples: [] };

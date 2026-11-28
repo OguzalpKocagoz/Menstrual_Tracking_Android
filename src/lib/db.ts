@@ -224,6 +224,39 @@ export async function saveDailyLog(date: ISODate, input: DailyLogInput): Promise
   return { date, ...log };
 }
 
+/**
+ * Yedekten geri yükleme: mevcut döngü ve günlük kayıtlarını dosyadakilerle
+ * değiştirir. Tek işlem (transaction) içinde: yazma yarıda kalırsa eski
+ * kayıtlar olduğu gibi kalır. Kayıtlar `parseBackup`'tan doğrulanmış gelir.
+ */
+export async function replaceAllRecords(cycles: Cycle[], logs: DailyLog[]): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync("DELETE FROM cycles");
+    await db.runAsync("DELETE FROM daily_logs");
+    for (const cycle of cycles) {
+      await db.runAsync(
+        "INSERT INTO cycles (id, start_date, period_end_date, notes, predicted_start_date) VALUES (?, ?, ?, ?, ?)",
+        cycle.id,
+        cycle.startDate,
+        cycle.periodEndDate,
+        cycle.notes ?? null,
+        cycle.predictedStartDate ?? null,
+      );
+    }
+    for (const log of logs) {
+      await db.runAsync(
+        "INSERT INTO daily_logs (date, flow, mood, symptoms, notes, temperature_c) VALUES (?, ?, ?, ?, ?, ?)",
+        log.date,
+        log.flow,
+        log.mood,
+        JSON.stringify(log.symptoms),
+        log.notes,
+        log.temperatureC,
+      );
+    }
+  });
+}
+
 /** Ayarlar ekranındaki "Tüm verileri sil". Ayarlar (tema, onay) korunur. */
 export async function deleteAllRecords(): Promise<void> {
   await db.withTransactionAsync(async () => {
